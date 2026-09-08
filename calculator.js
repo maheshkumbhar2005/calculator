@@ -149,13 +149,46 @@ function createMemoryState() {
   };
 }
 
-function createHistoryState() {
-  const entries = [];
+function createHistoryState(storageKey = 'calculator-history') {
+  const readEntries = () => {
+    try {
+      if (typeof localStorage === 'undefined') {
+        return [];
+      }
+
+      const raw = localStorage.getItem(storageKey);
+      return raw ? JSON.parse(raw) : [];
+    } catch (error) {
+      return [];
+    }
+  };
+
+  const writeEntries = (entries) => {
+    try {
+      if (typeof localStorage !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(entries));
+      }
+    } catch (error) {
+      // Ignore storage errors without breaking the calculator.
+    }
+  };
+
+  const entries = readEntries();
 
   return {
     add(entry) {
       entries.push(entry);
+      writeEntries(entries);
       return entries;
+    },
+    remove(index) {
+      if (index < 0 || index >= entries.length) {
+        return null;
+      }
+
+      const [removed] = entries.splice(index, 1);
+      writeEntries(entries);
+      return removed;
     },
     getEntries() {
       return [...entries];
@@ -168,6 +201,7 @@ function createHistoryState() {
     },
     clear() {
       entries.length = 0;
+      writeEntries(entries);
       return entries;
     },
   };

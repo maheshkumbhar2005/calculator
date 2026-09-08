@@ -66,16 +66,53 @@ const renderHistory = () => {
   entries.slice(-8).reverse().forEach((entry, index) => {
     const item = document.createElement('li');
     item.className = 'history-item';
-    item.textContent = entry;
+
+    const label = document.createElement('span');
+    label.className = 'history-label';
+    label.textContent = entry;
+
     const actualIndex = entries.length - 1 - index;
     item.dataset.historyIndex = String(actualIndex);
-    item.addEventListener('click', () => {
+
+    const reuseButton = document.createElement('button');
+    reuseButton.type = 'button';
+    reuseButton.className = 'history-reuse';
+    reuseButton.textContent = 'Reuse';
+    reuseButton.addEventListener('click', (event) => {
+      event.stopPropagation();
       const selectedEntry = history.select(actualIndex);
       if (selectedEntry) {
         expression = selectedEntry;
         updateDisplay(formatDisplayValue(expression));
       }
     });
+
+    const deleteButton = document.createElement('button');
+    deleteButton.type = 'button';
+    deleteButton.className = 'history-delete';
+    deleteButton.textContent = '×';
+    deleteButton.setAttribute('aria-label', `Delete history entry ${actualIndex + 1}`);
+    deleteButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      history.remove(actualIndex);
+      renderHistory();
+    });
+
+    item.addEventListener('click', (event) => {
+      if (event.target instanceof HTMLElement && event.target.closest('button')) {
+        return;
+      }
+
+      const selectedEntry = history.select(actualIndex);
+      if (selectedEntry) {
+        expression = selectedEntry;
+        updateDisplay(formatDisplayValue(expression));
+      }
+    });
+
+    item.appendChild(label);
+    item.appendChild(reuseButton);
+    item.appendChild(deleteButton);
     historyList.appendChild(item);
   });
 };
@@ -87,6 +124,11 @@ const clearExpression = () => {
 
 const clearHistory = () => {
   history.clear();
+  renderHistory();
+};
+
+const removeHistoryEntry = (index) => {
+  history.remove(index);
   renderHistory();
 };
 
@@ -325,6 +367,36 @@ document.querySelectorAll('[data-action]').forEach((button) => {
       applyScientificAction(action);
     }
   });
+});
+
+historyList.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const historyItem = target.closest('.history-item');
+  if (!historyItem) {
+    return;
+  }
+
+  const index = Number(historyItem.dataset.historyIndex);
+  if (Number.isNaN(index)) {
+    return;
+  }
+
+  if (target.classList.contains('history-delete')) {
+    removeHistoryEntry(index);
+    return;
+  }
+
+  if (target.classList.contains('history-reuse')) {
+    const selectedEntry = history.select(index);
+    if (selectedEntry) {
+      expression = selectedEntry;
+      updateDisplay(formatDisplayValue(expression));
+    }
+  }
 });
 
 document.addEventListener('keydown', (event) => {

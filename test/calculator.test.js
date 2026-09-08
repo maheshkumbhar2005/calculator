@@ -80,6 +80,42 @@ test('history state tracks expression entries', () => {
   assert.equal(history.select(1), '30 / 5');
 });
 
+test('history state can delete a single entry and persist it', () => {
+  const storage = {};
+  const originalStorage = globalThis.localStorage;
+  Object.defineProperty(globalThis, 'localStorage', {
+    value: {
+      getItem: (key) => storage[key] ?? null,
+      setItem: (key, value) => {
+        storage[key] = value;
+      },
+      removeItem: (key) => {
+        delete storage[key];
+      },
+    },
+    configurable: true,
+  });
+
+  try {
+    const history = createHistoryState('test-history');
+    history.add('10 + 5');
+    history.add('20 + 3');
+
+    history.remove(0);
+    assert.deepEqual(history.getEntries(), ['20 + 3']);
+    assert.equal(JSON.parse(storage['test-history'])[0], '20 + 3');
+  } finally {
+    if (originalStorage) {
+      Object.defineProperty(globalThis, 'localStorage', {
+        value: originalStorage,
+        configurable: true,
+      });
+    } else {
+      delete globalThis.localStorage;
+    }
+  }
+});
+
 test('memory state supports a full reset action', () => {
   const memory = createMemoryState();
 
