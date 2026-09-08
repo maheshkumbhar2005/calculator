@@ -46,9 +46,19 @@ const renderHistory = () => {
     return;
   }
 
-  entries.slice(-8).reverse().forEach((entry) => {
+  entries.slice(-8).reverse().forEach((entry, index) => {
     const item = document.createElement('li');
+    item.className = 'history-item';
     item.textContent = entry;
+    const actualIndex = entries.length - 1 - index;
+    item.dataset.historyIndex = String(actualIndex);
+    item.addEventListener('click', () => {
+      const selectedEntry = history.select(actualIndex);
+      if (selectedEntry) {
+        expression = selectedEntry;
+        updateDisplay(formatDisplayValue(expression));
+      }
+    });
     historyList.appendChild(item);
   });
 };
@@ -100,6 +110,19 @@ const deleteLast = () => {
 };
 
 const applyMemoryAction = (action) => {
+  if (action === 'memory-clear') {
+    memory.clear();
+    updateMemoryIndicator();
+    return;
+  }
+
+  if (action === 'memory-recall') {
+    expression = String(memory.recall());
+    updateDisplay(formatDisplayValue(expression));
+    updateMemoryIndicator();
+    return;
+  }
+
   if (!expression) {
     return;
   }
@@ -109,15 +132,12 @@ const applyMemoryAction = (action) => {
     return;
   }
 
-  if (action === 'memory-add') {
+  if (action === 'memory-store') {
+    memory.store(value);
+  } else if (action === 'memory-add') {
     memory.add(value);
   } else if (action === 'memory-subtract') {
     memory.subtract(value);
-  } else if (action === 'memory-recall') {
-    expression = String(memory.recall());
-    updateDisplay(formatDisplayValue(expression));
-    updateMemoryIndicator();
-    return;
   }
 
   updateMemoryIndicator();
@@ -178,7 +198,7 @@ const evaluate = () => {
   try {
     const result = calculateExpression(expression);
     expression = String(result);
-    history.add(`${expression}`);
+    history.add(expression);
     updateDisplay(formatDisplayValue(expression));
     renderHistory();
   } catch (error) {

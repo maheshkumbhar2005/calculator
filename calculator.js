@@ -66,6 +66,10 @@ function createMemoryState() {
       memoryValue -= Number(value);
       return memoryValue;
     },
+    store(value) {
+      memoryValue = Number(value);
+      return memoryValue;
+    },
     recall() {
       return memoryValue;
     },
@@ -86,6 +90,12 @@ function createHistoryState() {
     },
     getEntries() {
       return [...entries];
+    },
+    select(index) {
+      if (index < 0 || index >= entries.length) {
+        return null;
+      }
+      return entries[index];
     },
     clear() {
       entries.length = 0;

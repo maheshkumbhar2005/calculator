@@ -65,4 +65,14 @@ test('history state tracks expression entries', () => {
   history.add('30 / 5');
 
   assert.deepEqual(history.getEntries(), ['12 + 5', '30 / 5']);
+  assert.equal(history.select(1), '30 / 5');
+});
+
+test('memory state supports a full reset action', () => {
+  const memory = createMemoryState();
+
+  memory.add(20);
+  memory.clear();
+
+  assert.equal(memory.recall(), 0);
 });

@@ -23,24 +23,23 @@
         </div>
 
         <div class="memory-bar">
+          <button class="memory-btn" type="button" data-action="memory-store">MS</button>
           <button class="memory-btn" type="button" data-action="memory-add">M+</button>
           <button class="memory-btn" type="button" data-action="memory-subtract">M-</button>
-          <button class="memory-btn" type="button" data-action="memory-recall">MR</button>
+          <button class="memory-btn" type="button" data-action="memory-clear">MC</button>
           <span id="memory-indicator" class="memory-indicator">M: 0</span>
+          <button class="memory-btn" type="button" data-action="memory-recall">MR</button>
         </div>
 
         <div class="display-wrapper">
           <input id="display" class="display" type="text" readonly value="0" />
         </div>
 
-        <div class="scientific-row">
+        <div class="scientific-grid">
           <button class="btn scientific" data-action="sqrt">√</button>
           <button class="btn scientific" data-action="square">x²</button>
           <button class="btn scientific" data-action="reciprocal">1/x</button>
           <button class="btn scientific" data-action="percent">%</button>
-        </div>
-
-        <div class="scientific-row">
           <button class="btn scientific" data-action="sin">sin</button>
           <button class="btn scientific" data-action="cos">cos</button>
           <button class="btn scientific" data-action="tan">tan</button>
