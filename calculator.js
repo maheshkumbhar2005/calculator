@@ -245,6 +245,8 @@ export {
   squareValue,
   reciprocalValue,
   percentValue,
+  convertTemperature,
+  convertLength,
   formatNumber,
   createMemoryState,
   createHistoryState,
