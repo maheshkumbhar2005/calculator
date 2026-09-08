@@ -174,65 +174,129 @@ function createHistoryState() {
 }
 
 function calculateExpression(expression) {
-  const sanitized = expression.replace(/\s+/g, '');
-  const tokens = sanitized.match(/\d+|[+\-*/]/g);
-
-  if (!tokens || tokens.length === 0 || tokens.length % 2 === 0) {
+  if (typeof expression !== 'string') {
     throw new Error('Invalid expression');
   }
 
-  const values = [];
-  const operators = [];
-
-  const precedence = {
-    '+': 1,
-    '-': 1,
-    '*': 2,
-    '/': 2,
-  };
-
-  const applyOperator = (op, b, a) => {
-    if (op === '+') return a + b;
-    if (op === '-') return a - b;
-    if (op === '*') return a * b;
-    if (op === '/') return a / b;
-    throw new Error(`Unsupported operator: ${op}`);
-  };
-
-  for (let i = 0; i < tokens.length; i += 1) {
-    const token = tokens[i];
-
-    if (/\d+/.test(token)) {
-      values.push(Number(token));
-      continue;
-    }
-
-    const operator = token;
-    if (!['+', '-', '*', '/'].includes(operator)) {
-      throw new Error(`Unsupported operator: ${operator}`);
-    }
-
-    while (
-      operators.length > 0 &&
-      precedence[operators[operators.length - 1]] >= precedence[operator]
-    ) {
-      const lastOperator = operators.pop();
-      const rightValue = values.pop();
-      const leftValue = values.pop();
-      values.push(applyOperator(lastOperator, rightValue, leftValue));
-    }
-
-    operators.push(operator);
+  const sanitized = expression.replace(/\s+/g, '');
+  if (sanitized === '') {
+    throw new Error('Invalid expression');
   }
 
-  while (operators.length > 0) {
-    const operator = operators.pop();
-    const rightValue = values.pop();
-    const leftValue = values.pop();
-    values.push(applyOperator(operator, rightValue, leftValue));
+  let index = 0;
+
+  const parseNumber = () => {
+    let number = '';
+    let dotCount = 0;
+
+    while (index < sanitized.length) {
+      const char = sanitized[index];
+
+      if (/\d/.test(char)) {
+        number += char;
+        index += 1;
+        continue;
+      }
+
+      if (char === '.' && dotCount === 0) {
+        number += char;
+        dotCount += 1;
+        index += 1;
+        continue;
+      }
+
+      break;
+    }
+
+    if (number === '' || number === '.' || number.split('.').length > 2) {
+      throw new Error('Invalid expression');
+    }
+
+    return Number(number);
+  };
+
+  const parsePrimary = () => {
+    if (index >= sanitized.length) {
+      throw new Error('Invalid expression');
+    }
+
+    const char = sanitized[index];
+
+    if (char === '+' || char === '-') {
+      const sign = char;
+      index += 1;
+      const value = parsePrimary();
+      return sign === '-' ? -value : value;
+    }
+
+    if (char === '(') {
+      index += 1;
+      const value = parseAddSubtract();
+
+      if (index >= sanitized.length || sanitized[index] !== ')') {
+        throw new Error('Invalid expression: unmatched parenthesis');
+      }
+
+      index += 1;
+      return value;
+    }
+
+    if (/\d/.test(char) || char === '.') {
+      return parseNumber();
+    }
+
+    throw new Error('Invalid expression');
+  };
+
+  const parseMultiplyDivide = () => {
+    let value = parsePrimary();
+
+    while (index < sanitized.length) {
+      const char = sanitized[index];
+      if (char !== '*' && char !== '/') {
+        break;
+      }
+
+      index += 1;
+      const nextValue = parsePrimary();
+
+      if (char === '/') {
+        if (nextValue === 0) {
+          throw new Error('Division by zero is not allowed.');
+        }
+        value /= nextValue;
+      } else {
+        value *= nextValue;
+      }
+    }
+
+    return value;
+  };
+
+  const parseAddSubtract = () => {
+    let value = parseMultiplyDivide();
+
+    while (index < sanitized.length) {
+      const char = sanitized[index];
+      if (char !== '+' && char !== '-') {
+        break;
+      }
+
+      index += 1;
+      const nextValue = parseMultiplyDivide();
+      value = char === '+' ? value + nextValue : value - nextValue;
+    }
+
+    return value;
+  };
+
+  const result = parseAddSubtract();
+
+  if (index !== sanitized.length) {
+    throw new Error('Invalid expression');
   }
 
-  return values[0];
+  return result;
 }
 
 export {

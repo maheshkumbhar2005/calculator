@@ -37,6 +37,16 @@ test('divide divides numbers correctly', () => {
 test('calculateExpression evaluates arithmetic expressions', () => {
   assert.equal(calculateExpression('12 + 5 * 3'), 27);
   assert.equal(calculateExpression('30 / 5 + 2'), 8);
+  assert.equal(calculateExpression('2.5 + 3.5 * 2'), 9.5);
+  assert.equal(calculateExpression('(2 + 3) * 4'), 20);
+  assert.equal(calculateExpression('-5 + 3'), -2);
+  assert.equal(calculateExpression('5 * (-2 + 3)'), 5);
+});
+
+test('calculateExpression rejects invalid input and division by zero', () => {
+  assert.throws(() => calculateExpression('2 + * 3'), /Invalid expression|Unsupported operator/);
+  assert.throws(() => calculateExpression('((2 + 3)'), /Invalid expression|Unmatched parenthesis/);
+  assert.throws(() => calculateExpression('5 / 0'), /Division by zero/);
 });
 
 test('scientific helpers work correctly', () => {
