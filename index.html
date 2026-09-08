@@ -7,50 +7,71 @@
     <link rel="stylesheet" href="style.css" />
   </head>
   <body data-theme="dark">
-    <main class="calculator">
-      <div class="top-bar">
-        <span class="brand">Calculator</span>
-        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
-      </div>
+    <main class="calculator-shell">
+      <aside class="history-panel">
+        <div class="history-header">
+          <h2>History</h2>
+          <button class="history-clear" type="button" data-action="clear-history">Clear</button>
+        </div>
+        <ul id="history-list" class="history-list"></ul>
+      </aside>
 
-      <div class="display-wrapper">
-        <input id="display" class="display" type="text" readonly value="0" />
-      </div>
+      <section class="calculator">
+        <div class="top-bar">
+          <span class="brand">Calculator</span>
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
+        </div>
 
-      <div class="buttons">
-        <button class="btn secondary" data-action="clear">C</button>
-        <button class="btn secondary" data-action="delete">DEL</button>
-        <button class="btn secondary" data-action="toggle-sign">±</button>
-        <button class="btn secondary" data-value="/">÷</button>
+        <div class="memory-bar">
+          <button class="memory-btn" type="button" data-action="memory-add">M+</button>
+          <button class="memory-btn" type="button" data-action="memory-subtract">M-</button>
+          <button class="memory-btn" type="button" data-action="memory-recall">MR</button>
+          <span id="memory-indicator" class="memory-indicator">M: 0</span>
+        </div>
 
-        <button class="btn scientific" data-action="sqrt">√</button>
-        <button class="btn scientific" data-action="square">x²</button>
-        <button class="btn scientific" data-action="reciprocal">1/x</button>
-        <button class="btn secondary" data-value="*">×</button>
+        <div class="display-wrapper">
+          <input id="display" class="display" type="text" readonly value="0" />
+        </div>
 
-        <button class="btn scientific" data-action="sin">sin</button>
-        <button class="btn scientific" data-action="cos">cos</button>
-        <button class="btn scientific" data-action="tan">tan</button>
-        <button class="btn secondary" data-value="-">−</button>
+        <div class="scientific-row">
+          <button class="btn scientific" data-action="sqrt">√</button>
+          <button class="btn scientific" data-action="square">x²</button>
+          <button class="btn scientific" data-action="reciprocal">1/x</button>
+          <button class="btn scientific" data-action="percent">%</button>
+        </div>
 
-        <button class="btn" data-value="7">7</button>
-        <button class="btn" data-value="8">8</button>
-        <button class="btn" data-value="9">9</button>
-        <button class="btn secondary" data-value="+">+</button>
+        <div class="scientific-row">
+          <button class="btn scientific" data-action="sin">sin</button>
+          <button class="btn scientific" data-action="cos">cos</button>
+          <button class="btn scientific" data-action="tan">tan</button>
+          <button class="btn secondary" data-action="toggle-sign">±</button>
+        </div>
 
-        <button class="btn" data-value="4">4</button>
-        <button class="btn" data-value="5">5</button>
-        <button class="btn" data-value="6">6</button>
-        <button class="btn scientific" data-action="percent">%</button>
+        <div class="buttons">
+          <button class="btn secondary" data-action="clear">C</button>
+          <button class="btn secondary" data-action="delete">DEL</button>
+          <button class="btn secondary" data-value="/">÷</button>
+          <button class="btn secondary" data-value="*">×</button>
 
-        <button class="btn" data-value="1">1</button>
-        <button class="btn" data-value="2">2</button>
-        <button class="btn" data-value="3">3</button>
-        <button class="btn accent" data-action="equals">=</button>
+          <button class="btn" data-value="7">7</button>
+          <button class="btn" data-value="8">8</button>
+          <button class="btn" data-value="9">9</button>
+          <button class="btn secondary" data-value="-">−</button>
 
-        <button class="btn wide" data-value="0">0</button>
-        <button class="btn" data-value=".">.</button>
-      </div>
+          <button class="btn" data-value="4">4</button>
+          <button class="btn" data-value="5">5</button>
+          <button class="btn" data-value="6">6</button>
+          <button class="btn secondary" data-value="+">+</button>
+
+          <button class="btn" data-value="1">1</button>
+          <button class="btn" data-value="2">2</button>
+          <button class="btn" data-value="3">3</button>
+          <button class="btn accent" data-action="equals">=</button>
+
+          <button class="btn wide" data-value="0">0</button>
+          <button class="btn" data-value=".">.</button>
+        </div>
+      </section>
     </main>
 
     <script type="module" src="script.js"></script>

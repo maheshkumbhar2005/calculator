@@ -54,6 +54,46 @@ function formatNumber(value) {
   });
 }
 
+function createMemoryState() {
+  let memoryValue = 0;
+
+  return {
+    add(value) {
+      memoryValue += Number(value);
+      return memoryValue;
+    },
+    subtract(value) {
+      memoryValue -= Number(value);
+      return memoryValue;
+    },
+    recall() {
+      return memoryValue;
+    },
+    clear() {
+      memoryValue = 0;
+      return memoryValue;
+    },
+  };
+}
+
+function createHistoryState() {
+  const entries = [];
+
+  return {
+    add(entry) {
+      entries.push(entry);
+      return entries;
+    },
+    getEntries() {
+      return [...entries];
+    },
+    clear() {
+      entries.length = 0;
+      return entries;
+    },
+  };
+}
+
 function calculateExpression(expression) {
   const sanitized = expression.replace(/\s+/g, '');
   const tokens = sanitized.match(/\d+|[+\-*/]/g);
@@ -127,4 +167,6 @@ export {
   reciprocalValue,
   percentValue,
   formatNumber,
+  createMemoryState,
+  createHistoryState,
 };

@@ -12,6 +12,8 @@ import {
   reciprocalValue,
   percentValue,
   formatNumber,
+  createMemoryState,
+  createHistoryState,
 } from '../calculator.js';
 
 test('add adds numbers correctly', () => {
@@ -45,4 +47,22 @@ test('scientific helpers work correctly', () => {
 test('number formatting produces readable output', () => {
   assert.equal(formatNumber(12345.678), '12,345.678');
   assert.equal(formatNumber(0.0000123), '0.0000123');
+});
+
+test('memory state supports add, subtract, and recall', () => {
+  const memory = createMemoryState();
+
+  assert.equal(memory.add(25), 25);
+  assert.equal(memory.subtract(10), 15);
+  assert.equal(memory.recall(), 15);
+  assert.equal(memory.clear(), 0);
+});
+
+test('history state tracks expression entries', () => {
+  const history = createHistoryState();
+
+  history.add('12 + 5');
+  history.add('30 / 5');
+
+  assert.deepEqual(history.getEntries(), ['12 + 5', '30 / 5']);
 });

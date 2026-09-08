@@ -1,5 +1,7 @@
 import {
   calculateExpression,
+  createHistoryState,
+  createMemoryState,
   formatNumber,
   percentValue,
   reciprocalValue,
@@ -9,6 +11,11 @@ import {
 
 const display = document.getElementById('display');
 const themeToggle = document.getElementById('theme-toggle');
+const memoryIndicator = document.getElementById('memory-indicator');
+const historyList = document.getElementById('history-list');
+
+const memory = createMemoryState();
+const history = createHistoryState();
 let expression = '';
 
 const formatDisplayValue = (value) => {
@@ -23,9 +30,37 @@ const updateDisplay = (value) => {
   display.value = String(value || '0');
 };
 
+const updateMemoryIndicator = () => {
+  memoryIndicator.textContent = `M: ${formatNumber(memory.recall())}`;
+};
+
+const renderHistory = () => {
+  const entries = history.getEntries();
+  historyList.innerHTML = '';
+
+  if (entries.length === 0) {
+    const item = document.createElement('li');
+    item.className = 'history-empty';
+    item.textContent = 'No calculations yet';
+    historyList.appendChild(item);
+    return;
+  }
+
+  entries.slice(-8).reverse().forEach((entry) => {
+    const item = document.createElement('li');
+    item.textContent = entry;
+    historyList.appendChild(item);
+  });
+};
+
 const clearExpression = () => {
   expression = '';
   updateDisplay('0');
+};
+
+const clearHistory = () => {
+  history.clear();
+  renderHistory();
 };
 
 const updateTheme = (theme) => {
@@ -62,6 +97,30 @@ const appendValue = (value) => {
 const deleteLast = () => {
   expression = expression.slice(0, -1);
   updateDisplay(expression ? formatDisplayValue(expression) : '0');
+};
+
+const applyMemoryAction = (action) => {
+  if (!expression) {
+    return;
+  }
+
+  const value = Number(expression);
+  if (Number.isNaN(value)) {
+    return;
+  }
+
+  if (action === 'memory-add') {
+    memory.add(value);
+  } else if (action === 'memory-subtract') {
+    memory.subtract(value);
+  } else if (action === 'memory-recall') {
+    expression = String(memory.recall());
+    updateDisplay(formatDisplayValue(expression));
+    updateMemoryIndicator();
+    return;
+  }
+
+  updateMemoryIndicator();
 };
 
 const applyScientificAction = (action) => {
@@ -119,7 +178,9 @@ const evaluate = () => {
   try {
     const result = calculateExpression(expression);
     expression = String(result);
+    history.add(`${expression}`);
     updateDisplay(formatDisplayValue(expression));
+    renderHistory();
   } catch (error) {
     expression = '';
     updateDisplay('Error');
@@ -128,8 +189,7 @@ const evaluate = () => {
 
 document.querySelectorAll('[data-value]').forEach((button) => {
   button.addEventListener('click', () => {
-    const value = button.dataset.value;
-    appendValue(value);
+    appendValue(button.dataset.value);
   });
 });
 
@@ -142,6 +202,10 @@ document.querySelectorAll('[data-action]').forEach((button) => {
       deleteLast();
     } else if (action === 'equals') {
       evaluate();
+    } else if (action === 'clear-history') {
+      clearHistory();
+    } else if (action.startsWith('memory-')) {
+      applyMemoryAction(action);
     } else {
       applyScientificAction(action);
     }
@@ -200,4 +264,6 @@ themeToggle.addEventListener('click', () => {
 });
 
 updateTheme('dark');
+updateMemoryIndicator();
+renderHistory();
 clearExpression();
