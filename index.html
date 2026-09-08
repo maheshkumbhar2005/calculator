@@ -6,8 +6,13 @@
     <title>Calculator</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body>
+  <body data-theme="dark">
     <main class="calculator">
+      <div class="top-bar">
+        <span class="brand">Calculator</span>
+        <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
+      </div>
+
       <div class="display-wrapper">
         <input id="display" class="display" type="text" readonly value="0" />
       </div>
@@ -15,18 +20,28 @@
       <div class="buttons">
         <button class="btn secondary" data-action="clear">C</button>
         <button class="btn secondary" data-action="delete">DEL</button>
+        <button class="btn secondary" data-action="toggle-sign">±</button>
         <button class="btn secondary" data-value="/">÷</button>
+
+        <button class="btn scientific" data-action="sqrt">√</button>
+        <button class="btn scientific" data-action="square">x²</button>
+        <button class="btn scientific" data-action="reciprocal">1/x</button>
         <button class="btn secondary" data-value="*">×</button>
+
+        <button class="btn scientific" data-action="sin">sin</button>
+        <button class="btn scientific" data-action="cos">cos</button>
+        <button class="btn scientific" data-action="tan">tan</button>
+        <button class="btn secondary" data-value="-">−</button>
 
         <button class="btn" data-value="7">7</button>
         <button class="btn" data-value="8">8</button>
         <button class="btn" data-value="9">9</button>
-        <button class="btn secondary" data-value="-">−</button>
+        <button class="btn secondary" data-value="+">+</button>
 
         <button class="btn" data-value="4">4</button>
         <button class="btn" data-value="5">5</button>
         <button class="btn" data-value="6">6</button>
-        <button class="btn secondary" data-value="+">+</button>
+        <button class="btn scientific" data-action="percent">%</button>
 
         <button class="btn" data-value="1">1</button>
         <button class="btn" data-value="2">2</button>
