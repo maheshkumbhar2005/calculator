@@ -39,6 +39,54 @@ function percentValue(value) {
   return value / 100;
 }
 
+function powerValue(base, exponent) {
+  return Math.pow(base, exponent);
+}
+
+function logValue(value) {
+  if (value <= 0) {
+    throw new Error('Logarithm requires a positive value.');
+  }
+  return Math.log10(value);
+}
+
+function lnValue(value) {
+  if (value <= 0) {
+    throw new Error('Natural logarithm requires a positive value.');
+  }
+  return Math.log(value);
+}
+
+function asinValue(value) {
+  if (value < -1 || value > 1) {
+    throw new Error('asin requires a value between -1 and 1.');
+  }
+  return Number(((Math.asin(value) * 180) / Math.PI).toFixed(10));
+}
+
+function acosValue(value) {
+  if (value < -1 || value > 1) {
+    throw new Error('acos requires a value between -1 and 1.');
+  }
+  return Number(((Math.acos(value) * 180) / Math.PI).toFixed(10));
+}
+
+function atanValue(value) {
+  return Number(((Math.atan(value) * 180) / Math.PI).toFixed(10));
+}
+
+function factorialValue(value) {
+  if (!Number.isInteger(value) || value < 0) {
+    throw new Error('Factorial requires a non-negative integer.');
+  }
+
+  let result = 1;
+  for (let i = 2; i <= value; i += 1) {
+    result *= i;
+  }
+  return result;
+}
+
 function convertTemperature(value, fromUnit, toUnit) {
   const celsius = {
     c: value,
@@ -217,6 +265,11 @@ function calculateExpression(expression) {
     throw new Error('Invalid expression');
   }
 
+  const constants = {
+    pi: Math.PI,
+    e: Math.E,
+  };
+
   let index = 0;
 
   const parseNumber = () => {
@@ -249,6 +302,26 @@ function calculateExpression(expression) {
     return Number(number);
   };
 
+  const parseIdentifier = () => {
+    let identifier = '';
+
+    while (index < sanitized.length && /[a-zA-Z]/.test(sanitized[index])) {
+      identifier += sanitized[index];
+      index += 1;
+    }
+
+    if (!identifier) {
+      throw new Error('Invalid expression');
+    }
+
+    const lower = identifier.toLowerCase();
+    if (constants[lower] !== undefined) {
+      return constants[lower];
+    }
+
+    throw new Error('Invalid expression');
+  };
+
   const parsePrimary = () => {
     if (index >= sanitized.length) {
       throw new Error('Invalid expression');
@@ -279,11 +352,27 @@ function calculateExpression(expression) {
       return parseNumber();
     }
 
+    if (/[a-zA-Z]/.test(char)) {
+      return parseIdentifier();
+    }
+
     throw new Error('Invalid expression');
   };
 
-  const parseMultiplyDivide = () => {
+  const parseExponent = () => {
     let value = parsePrimary();
+
+    while (index < sanitized.length && sanitized[index] === '^') {
+      index += 1;
+      const exponent = parsePrimary();
+      value = powerValue(value, exponent);
+    }
+
+    return value;
+  };
+
+  const parseMultiplyDivide = () => {
+    let value = parseExponent();
 
     while (index < sanitized.length) {
       const char = sanitized[index];
@@ -292,7 +381,7 @@ function calculateExpression(expression) {
       }
 
       index += 1;
-      const nextValue = parsePrimary();
+      const nextValue = parseExponent();
 
       if (char === '/') {
         if (nextValue === 0) {
@@ -343,6 +432,13 @@ export {
   squareValue,
   reciprocalValue,
   percentValue,
+  powerValue,
+  logValue,
+  lnValue,
+  asinValue,
+  acosValue,
+  atanValue,
+  factorialValue,
   convertTemperature,
   convertLength,
   formatNumber,

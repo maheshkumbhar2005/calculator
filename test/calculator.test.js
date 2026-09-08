@@ -11,6 +11,13 @@ import {
   squareValue,
   reciprocalValue,
   percentValue,
+  powerValue,
+  logValue,
+  lnValue,
+  asinValue,
+  acosValue,
+  atanValue,
+  factorialValue,
   formatNumber,
   createMemoryState,
   createHistoryState,
@@ -41,6 +48,8 @@ test('calculateExpression evaluates arithmetic expressions', () => {
   assert.equal(calculateExpression('(2 + 3) * 4'), 20);
   assert.equal(calculateExpression('-5 + 3'), -2);
   assert.equal(calculateExpression('5 * (-2 + 3)'), 5);
+  assert.equal(calculateExpression('2 ^ 3 + 1'), 9);
+  assert.equal(calculateExpression('pi + e'), Math.PI + Math.E);
 });
 
 test('calculateExpression rejects invalid input and division by zero', () => {
@@ -54,6 +63,13 @@ test('scientific helpers work correctly', () => {
   assert.equal(squareValue(4), 16);
   assert.equal(reciprocalValue(4), 0.25);
   assert.equal(percentValue(250), 2.5);
+  assert.equal(powerValue(2, 3), 8);
+  assert.equal(logValue(100), 2);
+  assert.equal(lnValue(Math.E), 1);
+  assert.equal(asinValue(0.5), 30);
+  assert.equal(acosValue(0.5), 60);
+  assert.equal(atanValue(1), 45);
+  assert.equal(factorialValue(5), 120);
 });
 
 test('number formatting produces readable output', () => {

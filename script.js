@@ -1,11 +1,18 @@
 import {
+  acosValue,
+  asinValue,
+  atanValue,
   calculateExpression,
   convertLength,
   convertTemperature,
   createHistoryState,
   createMemoryState,
+  factorialValue,
   formatNumber,
+  lnValue,
+  logValue,
   percentValue,
+  powerValue,
   reciprocalValue,
   sqrtValue,
   squareValue,
@@ -237,6 +244,34 @@ const applyMemoryAction = (action) => {
 };
 
 const applyScientificAction = (action) => {
+  if (action === 'pi') {
+    expression = `${expression}${Math.PI}`;
+    updateDisplay(formatDisplayValue(expression));
+    return;
+  }
+
+  if (action === 'e') {
+    expression = `${expression}${Math.E}`;
+    updateDisplay(formatDisplayValue(expression));
+    return;
+  }
+
+  if (action === 'factorial') {
+    if (!expression) {
+      return;
+    }
+
+    try {
+      const value = Number(expression);
+      expression = String(factorialValue(value));
+      updateDisplay(formatDisplayValue(expression));
+    } catch (error) {
+      expression = '';
+      updateDisplay('Error');
+    }
+    return;
+  }
+
   if (!expression) {
     return;
   }
@@ -269,6 +304,21 @@ const applyScientificAction = (action) => {
         break;
       case 'tan':
         nextValue = Math.tan((value * Math.PI) / 180);
+        break;
+      case 'log':
+        nextValue = logValue(value);
+        break;
+      case 'ln':
+        nextValue = lnValue(value);
+        break;
+      case 'asin':
+        nextValue = asinValue(value);
+        break;
+      case 'acos':
+        nextValue = acosValue(value);
+        break;
+      case 'atan':
+        nextValue = atanValue(value);
         break;
       default:
         return;
@@ -368,6 +418,73 @@ document.querySelectorAll('[data-action]').forEach((button) => {
     }
   });
 });
+
+const powerButton = document.createElement('button');
+powerButton.className = 'btn scientific';
+powerButton.type = 'button';
+powerButton.dataset.action = 'power';
+powerButton.textContent = 'xʸ';
+
+const piButton = document.createElement('button');
+piButton.className = 'btn scientific';
+piButton.type = 'button';
+piButton.dataset.action = 'pi';
+piButton.textContent = 'π';
+
+const eButton = document.createElement('button');
+eButton.className = 'btn scientific';
+eButton.type = 'button';
+eButton.dataset.action = 'e';
+eButton.textContent = 'e';
+
+const logButton = document.createElement('button');
+logButton.className = 'btn scientific';
+logButton.type = 'button';
+logButton.dataset.action = 'log';
+logButton.textContent = 'log';
+
+const lnButton = document.createElement('button');
+lnButton.className = 'btn scientific';
+lnButton.type = 'button';
+lnButton.dataset.action = 'ln';
+lnButton.textContent = 'ln';
+
+const asinButton = document.createElement('button');
+asinButton.className = 'btn scientific';
+asinButton.type = 'button';
+asinButton.dataset.action = 'asin';
+asinButton.textContent = 'asin';
+
+const acosButton = document.createElement('button');
+acosButton.className = 'btn scientific';
+acosButton.type = 'button';
+acosButton.dataset.action = 'acos';
+acosButton.textContent = 'acos';
+
+const atanButton = document.createElement('button');
+atanButton.className = 'btn scientific';
+atanButton.type = 'button';
+atanButton.dataset.action = 'atan';
+atanButton.textContent = 'atan';
+
+const factorialButton = document.createElement('button');
+factorialButton.className = 'btn scientific';
+factorialButton.type = 'button';
+factorialButton.dataset.action = 'factorial';
+factorialButton.textContent = '!';
+
+const scientificGrid = document.querySelector('.scientific-grid');
+if (scientificGrid) {
+  scientificGrid.appendChild(piButton);
+  scientificGrid.appendChild(eButton);
+  scientificGrid.appendChild(powerButton);
+  scientificGrid.appendChild(logButton);
+  scientificGrid.appendChild(lnButton);
+  scientificGrid.appendChild(asinButton);
+  scientificGrid.appendChild(acosButton);
+  scientificGrid.appendChild(atanButton);
+  scientificGrid.appendChild(factorialButton);
+}
 
 historyList.addEventListener('click', (event) => {
   const target = event.target;
