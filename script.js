@@ -3,12 +3,19 @@ import {
   asinValue,
   atanValue,
   calculateExpression,
+  convertArea,
+  convertData,
   convertLength,
+  convertSpeed,
   convertTemperature,
+  convertTime,
+  convertVolume,
+  convertWeight,
   createHistoryState,
   createMemoryState,
   factorialValue,
   formatNumber,
+  fromRadians,
   lnValue,
   logValue,
   percentValue,
@@ -16,6 +23,7 @@ import {
   reciprocalValue,
   sqrtValue,
   squareValue,
+  toRadians,
 } from './calculator.js';
 
 const display = document.getElementById('display');
@@ -30,6 +38,20 @@ const convertButton = document.getElementById('convert-btn');
 const memory = createMemoryState();
 const history = createHistoryState();
 let expression = '';
+let angleMode = 'deg';
+
+const setAngleMode = (mode) => {
+  if (mode !== 'deg' && mode !== 'rad') {
+    return;
+  }
+
+  angleMode = mode;
+  document.querySelectorAll('[data-angle-mode]').forEach((button) => {
+    const isActive = button.dataset.angleMode === mode;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+};
 
 const formatDisplayValue = (value) => {
   const text = String(value ?? '').trim();
@@ -297,13 +319,13 @@ const applyScientificAction = (action) => {
         nextValue = -value;
         break;
       case 'sin':
-        nextValue = Math.sin((value * Math.PI) / 180);
+        nextValue = Math.sin(toRadians(value, angleMode));
         break;
       case 'cos':
-        nextValue = Math.cos((value * Math.PI) / 180);
+        nextValue = Math.cos(toRadians(value, angleMode));
         break;
       case 'tan':
-        nextValue = Math.tan((value * Math.PI) / 180);
+        nextValue = Math.tan(toRadians(value, angleMode));
         break;
       case 'log':
         nextValue = logValue(value);
@@ -312,13 +334,13 @@ const applyScientificAction = (action) => {
         nextValue = lnValue(value);
         break;
       case 'asin':
-        nextValue = asinValue(value);
+        nextValue = asinValue(value, angleMode);
         break;
       case 'acos':
-        nextValue = acosValue(value);
+        nextValue = acosValue(value, angleMode);
         break;
       case 'atan':
-        nextValue = atanValue(value);
+        nextValue = atanValue(value, angleMode);
         break;
       default:
         return;
@@ -332,25 +354,116 @@ const applyScientificAction = (action) => {
   }
 };
 
+const unitCategories = {
+  temperature: {
+    label: 'Temperature',
+    units: {
+      c: '°C',
+      f: '°F',
+      k: 'K',
+    },
+    defaults: ['c', 'f'],
+  },
+  length: {
+    label: 'Length',
+    units: {
+      mm: 'mm',
+      cm: 'cm',
+      m: 'm',
+      km: 'km',
+      in: 'in',
+      ft: 'ft',
+      yd: 'yd',
+    },
+    defaults: ['cm', 'm'],
+  },
+  weight: {
+    label: 'Weight',
+    units: {
+      mg: 'mg',
+      g: 'g',
+      kg: 'kg',
+      lb: 'lb',
+      oz: 'oz',
+    },
+    defaults: ['kg', 'lb'],
+  },
+  area: {
+    label: 'Area',
+    units: {
+      mm2: 'mm²',
+      cm2: 'cm²',
+      m2: 'm²',
+      km2: 'km²',
+      in2: 'in²',
+      ft2: 'ft²',
+      yd2: 'yd²',
+    },
+    defaults: ['m2', 'ft2'],
+  },
+  volume: {
+    label: 'Volume',
+    units: {
+      ml: 'ml',
+      l: 'L',
+      m3: 'm³',
+      cup: 'cup',
+      pint: 'pt',
+      gal: 'gal',
+    },
+    defaults: ['l', 'gal'],
+  },
+  speed: {
+    label: 'Speed',
+    units: {
+      'm/s': 'm/s',
+      'km/h': 'km/h',
+      mph: 'mph',
+      knot: 'kn',
+      'ft/s': 'ft/s',
+    },
+    defaults: ['km/h', 'mph'],
+  },
+  time: {
+    label: 'Time',
+    units: {
+      ms: 'ms',
+      s: 's',
+      min: 'min',
+      h: 'h',
+      day: 'day',
+      week: 'week',
+    },
+    defaults: ['min', 'h'],
+  },
+  data: {
+    label: 'Data',
+    units: {
+      bit: 'bit',
+      byte: 'B',
+      kb: 'KB',
+      mb: 'MB',
+      gb: 'GB',
+      tb: 'TB',
+    },
+    defaults: ['mb', 'gb'],
+  },
+};
+
 const updateUnitOptions = () => {
   const type = unitTypeSelect.value;
-  const temperatureOptions = ['c', 'f', 'k'];
-  const lengthOptions = ['mm', 'cm', 'm', 'km', 'in', 'ft', 'yd'];
-  const options = type === 'temperature' ? temperatureOptions : lengthOptions;
+  const category = unitCategories[type] || unitCategories.length;
+  const options = Object.entries(category.units);
 
   const buildOptions = (select, selected) => {
     select.innerHTML = options
-      .map((option) => `<option value="${option}" ${option === selected ? 'selected' : ''}>${option.toUpperCase()}</option>`)
+      .map(([value, label]) => `<option value="${value}" ${value === selected ? 'selected' : ''}>${label}</option>`)
       .join('');
   };
 
-  if (type === 'temperature') {
-    buildOptions(fromUnitSelect, 'c');
-    buildOptions(toUnitSelect, 'f');
-  } else {
-    buildOptions(fromUnitSelect, 'cm');
-    buildOptions(toUnitSelect, 'm');
-  }
+  const [fromDefault, toDefault] = category.defaults;
+  buildOptions(fromUnitSelect, fromDefault);
+  buildOptions(toUnitSelect, toDefault);
 };
 
 const handleUnitConversion = () => {
@@ -365,9 +478,27 @@ const handleUnitConversion = () => {
   const toUnit = toUnitSelect.value;
 
   try {
-    const result = type === 'temperature'
-      ? convertTemperature(value, fromUnit, toUnit)
-      : convertLength(value, fromUnit, toUnit);
+    let result;
+
+    if (type === 'temperature') {
+      result = convertTemperature(value, fromUnit, toUnit);
+    } else if (type === 'length') {
+      result = convertLength(value, fromUnit, toUnit);
+    } else if (type === 'weight') {
+      result = convertWeight(value, fromUnit, toUnit);
+    } else if (type === 'area') {
+      result = convertArea(value, fromUnit, toUnit);
+    } else if (type === 'volume') {
+      result = convertVolume(value, fromUnit, toUnit);
+    } else if (type === 'speed') {
+      result = convertSpeed(value, fromUnit, toUnit);
+    } else if (type === 'time') {
+      result = convertTime(value, fromUnit, toUnit);
+    } else if (type === 'data') {
+      result = convertData(value, fromUnit, toUnit);
+    } else {
+      throw new Error('Unsupported conversion type');
+    }
 
     expression = String(result);
     updateDisplay(formatDisplayValue(expression));
@@ -555,7 +686,19 @@ document.addEventListener('keydown', (event) => {
     applyScientificAction('reciprocal');
   } else if (loweredKey === 'p') {
     event.preventDefault();
-    applyScientificAction('percent');
+    applyScientificAction('pi');
+  } else if (loweredKey === 'l') {
+    event.preventDefault();
+    applyScientificAction('log');
+  } else if (loweredKey === 'i') {
+    event.preventDefault();
+    applyScientificAction('ln');
+  } else if (loweredKey === 'c') {
+    event.preventDefault();
+    applyScientificAction('cos');
+  } else if (loweredKey === 't') {
+    event.preventDefault();
+    applyScientificAction('tan');
   } else if (loweredKey === 'n') {
     event.preventDefault();
     applyScientificAction('toggle-sign');
@@ -567,9 +710,16 @@ themeToggle.addEventListener('click', () => {
   updateTheme(nextTheme);
 });
 
+document.querySelectorAll('[data-angle-mode]').forEach((button) => {
+  button.addEventListener('click', () => {
+    setAngleMode(button.dataset.angleMode);
+  });
+});
+
 unitTypeSelect.addEventListener('change', updateUnitOptions);
 convertButton.addEventListener('click', handleUnitConversion);
 updateUnitOptions();
+setAngleMode('deg');
 updateTheme('dark');
 updateMemoryIndicator();
 renderHistory();

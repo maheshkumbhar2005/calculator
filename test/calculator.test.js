@@ -18,11 +18,19 @@ import {
   acosValue,
   atanValue,
   factorialValue,
+  toRadians,
+  fromRadians,
   formatNumber,
   createMemoryState,
   createHistoryState,
   convertTemperature,
   convertLength,
+  convertWeight,
+  convertArea,
+  convertVolume,
+  convertSpeed,
+  convertTime,
+  convertData,
 } from '../calculator.js';
 
 test('add adds numbers correctly', () => {
@@ -70,6 +78,10 @@ test('scientific helpers work correctly', () => {
   assert.equal(acosValue(0.5), 60);
   assert.equal(atanValue(1), 45);
   assert.equal(factorialValue(5), 120);
+  assert.equal(toRadians(90, 'deg'), Math.PI / 2);
+  assert.equal(toRadians(1, 'rad'), 1);
+  assert.equal(fromRadians(Math.PI / 2, 'deg'), 90);
+  assert.equal(fromRadians(1, 'rad'), 1);
 });
 
 test('number formatting produces readable output', () => {
@@ -151,4 +163,13 @@ test('length conversions work for metric units', () => {
   assert.equal(convertLength(100, 'cm', 'm'), 1);
   assert.equal(convertLength(2, 'km', 'm'), 2000);
   assert.equal(convertLength(500, 'mm', 'cm'), 50);
+});
+
+test('advanced conversions work for common categories', () => {
+  assert.equal(convertWeight(2.2, 'kg', 'lb'), 4.850169768067307);
+  assert.equal(convertArea(1, 'm2', 'ft2'), 10.763910416709722);
+  assert.equal(convertVolume(1, 'l', 'ml'), 1000);
+  assert.equal(convertSpeed(100, 'km/h', 'm/s'), 27.77777777777778);
+  assert.equal(convertTime(2, 'h', 'min'), 120);
+  assert.equal(convertData(1, 'mb', 'kb'), 1024);
 });

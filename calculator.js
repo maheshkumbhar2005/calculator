@@ -43,6 +43,20 @@ function powerValue(base, exponent) {
   return Math.pow(base, exponent);
 }
 
+function toRadians(value, mode = 'deg') {
+  if (mode === 'rad') {
+    return value;
+  }
+  return (value * Math.PI) / 180;
+}
+
+function fromRadians(value, mode = 'deg') {
+  if (mode === 'rad') {
+    return value;
+  }
+  return (value * 180) / Math.PI;
+}
+
 function logValue(value) {
   if (value <= 0) {
     throw new Error('Logarithm requires a positive value.');
@@ -57,22 +71,22 @@ function lnValue(value) {
   return Math.log(value);
 }
 
-function asinValue(value) {
+function asinValue(value, mode = 'deg') {
   if (value < -1 || value > 1) {
     throw new Error('asin requires a value between -1 and 1.');
   }
-  return Number(((Math.asin(value) * 180) / Math.PI).toFixed(10));
+  return Number(fromRadians(Math.asin(value), mode).toFixed(10));
 }
 
-function acosValue(value) {
+function acosValue(value, mode = 'deg') {
   if (value < -1 || value > 1) {
     throw new Error('acos requires a value between -1 and 1.');
   }
-  return Number(((Math.acos(value) * 180) / Math.PI).toFixed(10));
+  return Number(fromRadians(Math.acos(value), mode).toFixed(10));
 }
 
-function atanValue(value) {
-  return Number(((Math.atan(value) * 180) / Math.PI).toFixed(10));
+function atanValue(value, mode = 'deg') {
+  return Number(fromRadians(Math.atan(value), mode).toFixed(10));
 }
 
 function factorialValue(value) {
@@ -151,6 +165,190 @@ function convertLength(value, fromUnit, toUnit) {
 
   if (converted[toUnit] === undefined) {
     throw new Error('Unsupported length unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertWeight(value, fromUnit, toUnit) {
+  const grams = {
+    mg: value / 1000,
+    g: value,
+    kg: value * 1000,
+    lb: value * 453.59237,
+    oz: value * 28.349523125,
+  };
+
+  const inGrams = grams[fromUnit];
+  if (inGrams === undefined) {
+    throw new Error('Unsupported weight unit');
+  }
+
+  const converted = {
+    mg: inGrams * 1000,
+    g: inGrams,
+    kg: inGrams / 1000,
+    lb: inGrams / 453.59237,
+    oz: inGrams / 28.349523125,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported weight unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertArea(value, fromUnit, toUnit) {
+  const squareMeters = {
+    mm2: value / 1_000_000,
+    cm2: value / 10_000,
+    m2: value,
+    km2: value * 1_000_000,
+    in2: value * 0.00064516,
+    ft2: value * 0.09290304,
+    yd2: value * 0.83612736,
+  };
+
+  const inSquareMeters = squareMeters[fromUnit];
+  if (inSquareMeters === undefined) {
+    throw new Error('Unsupported area unit');
+  }
+
+  const converted = {
+    mm2: inSquareMeters * 1_000_000,
+    cm2: inSquareMeters * 10_000,
+    m2: inSquareMeters,
+    km2: inSquareMeters / 1_000_000,
+    in2: inSquareMeters / 0.00064516,
+    ft2: inSquareMeters / 0.09290304,
+    yd2: inSquareMeters / 0.83612736,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported area unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertVolume(value, fromUnit, toUnit) {
+  const liters = {
+    ml: value / 1000,
+    l: value,
+    m3: value * 1000,
+    cup: value * 0.236588,
+    pint: value * 0.473176,
+    gal: value * 3.785411784,
+  };
+
+  const inLiters = liters[fromUnit];
+  if (inLiters === undefined) {
+    throw new Error('Unsupported volume unit');
+  }
+
+  const converted = {
+    ml: inLiters * 1000,
+    l: inLiters,
+    m3: inLiters / 1000,
+    cup: inLiters / 0.236588,
+    pint: inLiters / 0.473176,
+    gal: inLiters / 3.785411784,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported volume unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertSpeed(value, fromUnit, toUnit) {
+  const metersPerSecond = {
+    'm/s': value,
+    'km/h': value / 3.6,
+    mph: value * 0.44704,
+    knot: value * 0.514444,
+    'ft/s': value * 0.3048,
+  };
+
+  const inMetersPerSecond = metersPerSecond[fromUnit];
+  if (inMetersPerSecond === undefined) {
+    throw new Error('Unsupported speed unit');
+  }
+
+  const converted = {
+    'm/s': inMetersPerSecond,
+    'km/h': inMetersPerSecond * 3.6,
+    mph: inMetersPerSecond / 0.44704,
+    knot: inMetersPerSecond / 0.514444,
+    'ft/s': inMetersPerSecond / 0.3048,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported speed unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertTime(value, fromUnit, toUnit) {
+  const seconds = {
+    ms: value / 1000,
+    s: value,
+    min: value * 60,
+    h: value * 3600,
+    day: value * 86400,
+    week: value * 604800,
+  };
+
+  const inSeconds = seconds[fromUnit];
+  if (inSeconds === undefined) {
+    throw new Error('Unsupported time unit');
+  }
+
+  const converted = {
+    ms: inSeconds * 1000,
+    s: inSeconds,
+    min: inSeconds / 60,
+    h: inSeconds / 3600,
+    day: inSeconds / 86400,
+    week: inSeconds / 604800,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported time unit');
+  }
+
+  return converted[toUnit];
+}
+
+function convertData(value, fromUnit, toUnit) {
+  const bytes = {
+    bit: value / 8,
+    byte: value,
+    kb: value * 1024,
+    mb: value * 1024 * 1024,
+    gb: value * 1024 * 1024 * 1024,
+    tb: value * 1024 * 1024 * 1024 * 1024,
+  };
+
+  const inBytes = bytes[fromUnit];
+  if (inBytes === undefined) {
+    throw new Error('Unsupported data unit');
+  }
+
+  const converted = {
+    bit: inBytes * 8,
+    byte: inBytes,
+    kb: inBytes / 1024,
+    mb: inBytes / (1024 * 1024),
+    gb: inBytes / (1024 * 1024 * 1024),
+    tb: inBytes / (1024 * 1024 * 1024 * 1024),
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported data unit');
   }
 
   return converted[toUnit];
@@ -433,6 +631,8 @@ export {
   reciprocalValue,
   percentValue,
   powerValue,
+  toRadians,
+  fromRadians,
   logValue,
   lnValue,
   asinValue,
@@ -441,6 +641,12 @@ export {
   factorialValue,
   convertTemperature,
   convertLength,
+  convertWeight,
+  convertArea,
+  convertVolume,
+  convertSpeed,
+  convertTime,
+  convertData,
   formatNumber,
   createMemoryState,
   createHistoryState,
