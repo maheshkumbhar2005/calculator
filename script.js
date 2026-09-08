@@ -25,10 +25,21 @@ const history = createHistoryState();
 let expression = '';
 
 const formatDisplayValue = (value) => {
-  const number = Number(value);
+  const text = String(value ?? '').trim();
+
+  if (text === '') {
+    return '0';
+  }
+
+  if (/^[0-9+\-*/().\s]+$/.test(text)) {
+    return text;
+  }
+
+  const number = Number(text);
   if (!Number.isFinite(number)) {
     return 'Error';
   }
+
   return formatNumber(number);
 };
 
@@ -85,6 +96,22 @@ const updateTheme = (theme) => {
 };
 
 const appendValue = (value) => {
+  if (expression === 'Error') {
+    expression = '';
+  }
+
+  if (value === '.' && expression === '') {
+    expression = '0.';
+    updateDisplay(expression);
+    return;
+  }
+
+  if (value === '.' && /[0-9]$/.test(expression) === false) {
+    expression += '0.';
+    updateDisplay(expression);
+    return;
+  }
+
   if (value === '.' && expression.endsWith('.')) {
     return;
   }
@@ -101,13 +128,31 @@ const appendValue = (value) => {
 
     if (['+', '-', '*', '/'].includes(lastChar)) {
       expression = expression.slice(0, -1) + value;
-      updateDisplay(formatDisplayValue(expression));
+      updateDisplay(expression);
       return;
     }
   }
 
+  if (value === '(') {
+    if (expression && /[0-9)]$/.test(expression)) {
+      return;
+    }
+    expression += value;
+    updateDisplay(expression);
+    return;
+  }
+
+  if (value === ')') {
+    if (!expression || !/[0-9)]$/.test(expression)) {
+      return;
+    }
+    expression += value;
+    updateDisplay(expression);
+    return;
+  }
+
   expression += value;
-  updateDisplay(formatDisplayValue(expression));
+  updateDisplay(expression);
 };
 
 const deleteLast = () => {
