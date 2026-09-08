@@ -30,6 +30,7 @@ const display = document.getElementById('display');
 const themeToggle = document.getElementById('theme-toggle');
 const memoryIndicator = document.getElementById('memory-indicator');
 const historyList = document.getElementById('history-list');
+const angleStatus = document.getElementById('angle-status');
 const unitTypeSelect = document.getElementById('unit-type');
 const fromUnitSelect = document.getElementById('from-unit');
 const toUnitSelect = document.getElementById('to-unit');
@@ -46,6 +47,10 @@ const setAngleMode = (mode) => {
   }
 
   angleMode = mode;
+  if (angleStatus) {
+    angleStatus.textContent = mode.toUpperCase();
+  }
+
   document.querySelectorAll('[data-angle-mode]').forEach((button) => {
     const isActive = button.dataset.angleMode === mode;
     button.classList.toggle('is-active', isActive);
