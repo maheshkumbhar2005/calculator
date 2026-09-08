@@ -39,6 +39,75 @@ function percentValue(value) {
   return value / 100;
 }
 
+function convertTemperature(value, fromUnit, toUnit) {
+  const celsius = {
+    c: value,
+    f: (value - 32) * (5 / 9),
+    k: value - 273.15,
+  };
+
+  if (fromUnit === 'c') {
+    return {
+      c: value,
+      f: (value * 9) / 5 + 32,
+      k: value + 273.15,
+    }[toUnit];
+  }
+
+  if (fromUnit === 'f') {
+    const inCelsius = celsius.f;
+    return {
+      c: inCelsius,
+      f: value,
+      k: inCelsius + 273.15,
+    }[toUnit];
+  }
+
+  if (fromUnit === 'k') {
+    const inCelsius = value - 273.15;
+    return {
+      c: inCelsius,
+      f: (inCelsius * 9) / 5 + 32,
+      k: value,
+    }[toUnit];
+  }
+
+  throw new Error('Unsupported temperature unit');
+}
+
+function convertLength(value, fromUnit, toUnit) {
+  const meters = {
+    mm: value / 1000,
+    cm: value / 100,
+    m: value,
+    km: value * 1000,
+    in: value * 0.0254,
+    ft: value * 0.3048,
+    yd: value * 0.9144,
+  };
+
+  const inMeters = meters[fromUnit];
+  if (inMeters === undefined) {
+    throw new Error('Unsupported length unit');
+  }
+
+  const converted = {
+    mm: inMeters * 1000,
+    cm: inMeters * 100,
+    m: inMeters,
+    km: inMeters / 1000,
+    in: inMeters / 0.0254,
+    ft: inMeters / 0.3048,
+    yd: inMeters / 0.9144,
+  };
+
+  if (converted[toUnit] === undefined) {
+    throw new Error('Unsupported length unit');
+  }
+
+  return converted[toUnit];
+}
+
 function formatNumber(value) {
   if (!Number.isFinite(value)) {
     return 'Error';

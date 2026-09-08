@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -44,6 +44,50 @@
           <button class="btn scientific" data-action="cos">cos</button>
           <button class="btn scientific" data-action="tan">tan</button>
           <button class="btn secondary" data-action="toggle-sign">±</button>
+        </div>
+
+        <div class="converter-panel">
+          <div class="converter-row">
+            <label for="unit-type">Type</label>
+            <select id="unit-type">
+              <option value="temperature">Temperature</option>
+              <option value="length">Length</option>
+            </select>
+          </div>
+
+          <div class="converter-row">
+            <label for="from-unit">From</label>
+            <select id="from-unit">
+              <option value="c">°C</option>
+              <option value="f">°F</option>
+              <option value="k">K</option>
+              <option value="mm">mm</option>
+              <option value="cm">cm</option>
+              <option value="m">m</option>
+              <option value="km">km</option>
+              <option value="in">in</option>
+              <option value="ft">ft</option>
+              <option value="yd">yd</option>
+            </select>
+          </div>
+
+          <div class="converter-row">
+            <label for="to-unit">To</label>
+            <select id="to-unit">
+              <option value="c">°C</option>
+              <option value="f" selected>°F</option>
+              <option value="k">K</option>
+              <option value="mm">mm</option>
+              <option value="cm">cm</option>
+              <option value="m">m</option>
+              <option value="km">km</option>
+              <option value="in">in</option>
+              <option value="ft">ft</option>
+              <option value="yd">yd</option>
+            </select>
+          </div>
+
+          <button id="convert-btn" class="btn secondary convert-btn" type="button">Convert</button>
         </div>
 
         <div class="buttons">

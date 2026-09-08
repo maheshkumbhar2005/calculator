@@ -1,5 +1,7 @@
 import {
   calculateExpression,
+  convertLength,
+  convertTemperature,
   createHistoryState,
   createMemoryState,
   formatNumber,
@@ -13,6 +15,10 @@ const display = document.getElementById('display');
 const themeToggle = document.getElementById('theme-toggle');
 const memoryIndicator = document.getElementById('memory-indicator');
 const historyList = document.getElementById('history-list');
+const unitTypeSelect = document.getElementById('unit-type');
+const fromUnitSelect = document.getElementById('from-unit');
+const toUnitSelect = document.getElementById('to-unit');
+const convertButton = document.getElementById('convert-btn');
 
 const memory = createMemoryState();
 const history = createHistoryState();
@@ -189,6 +195,50 @@ const applyScientificAction = (action) => {
   }
 };
 
+const updateUnitOptions = () => {
+  const type = unitTypeSelect.value;
+  const temperatureOptions = ['c', 'f', 'k'];
+  const lengthOptions = ['mm', 'cm', 'm', 'km', 'in', 'ft', 'yd'];
+  const options = type === 'temperature' ? temperatureOptions : lengthOptions;
+
+  const buildOptions = (select, selected) => {
+    select.innerHTML = options
+      .map((option) => `<option value="${option}" ${option === selected ? 'selected' : ''}>${option.toUpperCase()}</option>`)
+      .join('');
+  };
+
+  if (type === 'temperature') {
+    buildOptions(fromUnitSelect, 'c');
+    buildOptions(toUnitSelect, 'f');
+  } else {
+    buildOptions(fromUnitSelect, 'cm');
+    buildOptions(toUnitSelect, 'm');
+  }
+};
+
+const handleUnitConversion = () => {
+  const value = Number(expression || display.value);
+  if (!Number.isFinite(value)) {
+    updateDisplay('Error');
+    return;
+  }
+
+  const type = unitTypeSelect.value;
+  const fromUnit = fromUnitSelect.value;
+  const toUnit = toUnitSelect.value;
+
+  try {
+    const result = type === 'temperature'
+      ? convertTemperature(value, fromUnit, toUnit)
+      : convertLength(value, fromUnit, toUnit);
+
+    expression = String(result);
+    updateDisplay(formatDisplayValue(expression));
+  } catch (error) {
+    updateDisplay('Error');
+  }
+};
+
 const evaluate = () => {
   if (!expression) {
     updateDisplay('0');
@@ -283,6 +333,9 @@ themeToggle.addEventListener('click', () => {
   updateTheme(nextTheme);
 });
 
+unitTypeSelect.addEventListener('change', updateUnitOptions);
+convertButton.addEventListener('click', handleUnitConversion);
+updateUnitOptions();
 updateTheme('dark');
 updateMemoryIndicator();
 renderHistory();

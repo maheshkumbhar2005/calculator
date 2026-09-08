@@ -14,6 +14,8 @@ import {
   formatNumber,
   createMemoryState,
   createHistoryState,
+  convertTemperature,
+  convertLength,
 } from '../calculator.js';
 
 test('add adds numbers correctly', () => {
@@ -75,4 +77,16 @@ test('memory state supports a full reset action', () => {
   memory.clear();
 
   assert.equal(memory.recall(), 0);
+});
+
+test('temperature conversions work for common units', () => {
+  assert.equal(convertTemperature(32, 'f', 'c'), 0);
+  assert.equal(convertTemperature(100, 'c', 'f'), 212);
+  assert.equal(convertTemperature(273.15, 'k', 'c'), 0);
+});
+
+test('length conversions work for metric units', () => {
+  assert.equal(convertLength(100, 'cm', 'm'), 1);
+  assert.equal(convertLength(2, 'km', 'm'), 2000);
+  assert.equal(convertLength(500, 'mm', 'cm'), 50);
 });

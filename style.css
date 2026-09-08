@@ -193,6 +193,43 @@ body {
   margin-bottom: 10px;
 }
 
+.converter-panel {
+  display: grid;
+  gap: 10px;
+  background: var(--display-bg);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 14px;
+}
+
+.converter-row {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  align-items: center;
+  gap: 8px;
+}
+
+.converter-row label {
+  color: var(--text);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.converter-row select,
+.convert-btn {
+  border: none;
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--button);
+  color: var(--button-text);
+  font-weight: 700;
+}
+
+.convert-btn {
+  width: 100%;
+  cursor: pointer;
+}
+
 .buttons {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
