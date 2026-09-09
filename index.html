@@ -6,9 +6,9 @@
     <title>Calculator</title>
     <link rel="stylesheet" href="style.css" />
   </head>
-  <body data-theme="dark">
+  <body data-theme="dark" data-mode="standard" data-history-open="false">
     <main class="calculator-shell">
-      <aside class="history-panel">
+      <aside id="history-panel" class="history-panel" aria-label="Calculation history">
         <div class="history-header">
           <h2>History</h2>
           <button class="history-clear" type="button" data-action="clear-history">Clear</button>
@@ -16,19 +16,32 @@
         <ul id="history-list" class="history-list"></ul>
       </aside>
 
-      <section class="calculator">
+      <section class="calculator" aria-label="Calculator">
         <div class="top-bar">
-          <span class="brand">Calculator</span>
-          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
+          <div class="top-bar-group">
+            <button id="history-toggle" class="history-toggle" type="button" aria-label="Open history drawer" aria-expanded="false">
+              History
+            </button>
+            <span class="brand">Calculator</span>
+          </div>
+
+          <div class="toolbar-actions">
+            <div class="mode-switcher" role="tablist" aria-label="Calculator mode selector">
+              <button type="button" class="mode-switch is-active" data-calculator-mode="standard" aria-pressed="true">Standard</button>
+              <button type="button" class="mode-switch" data-calculator-mode="scientific" aria-pressed="false">Scientific</button>
+              <button type="button" class="mode-switch" data-calculator-mode="converter" aria-pressed="false">Convert</button>
+            </div>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
+          </div>
         </div>
 
         <div class="memory-bar">
-          <button class="memory-btn" type="button" data-action="memory-store">MS</button>
-          <button class="memory-btn" type="button" data-action="memory-add">M+</button>
-          <button class="memory-btn" type="button" data-action="memory-subtract">M-</button>
-          <button class="memory-btn" type="button" data-action="memory-clear">MC</button>
-          <span id="memory-indicator" class="memory-indicator">M: 0</span>
-          <button class="memory-btn" type="button" data-action="memory-recall">MR</button>
+          <button class="memory-btn" type="button" data-action="memory-store" title="Store in memory">MS</button>
+          <button class="memory-btn" type="button" data-action="memory-add" title="Add to memory">M+</button>
+          <button class="memory-btn" type="button" data-action="memory-subtract" title="Subtract from memory">M-</button>
+          <button class="memory-btn" type="button" data-action="memory-clear" title="Clear memory">MC</button>
+          <span id="memory-indicator" class="memory-indicator" aria-live="polite">M: 0</span>
+          <button class="memory-btn" type="button" data-action="memory-recall" title="Recall memory">MR</button>
         </div>
 
         <div class="display-wrapper">
@@ -36,18 +49,18 @@
             <span class="display-label">Expression</span>
             <span id="angle-status" class="angle-status">DEG</span>
           </div>
-          <input id="display" class="display" type="text" readonly value="0" />
+          <input id="display" class="display" type="text" readonly value="0" aria-label="Calculator display" />
         </div>
 
-        <div class="scientific-grid">
-          <button class="btn scientific" data-action="sqrt">√</button>
-          <button class="btn scientific" data-action="square">x²</button>
-          <button class="btn scientific" data-action="reciprocal">1/x</button>
-          <button class="btn scientific" data-action="percent">%</button>
-          <button class="btn scientific" data-action="sin">sin</button>
-          <button class="btn scientific" data-action="cos">cos</button>
-          <button class="btn scientific" data-action="tan">tan</button>
-          <button class="btn secondary" data-action="toggle-sign">±</button>
+        <div class="scientific-grid" aria-label="Scientific functions">
+          <button class="btn scientific" data-action="sqrt" title="Square root" aria-label="Square root">√</button>
+          <button class="btn scientific" data-action="square" title="Square" aria-label="Square">x²</button>
+          <button class="btn scientific" data-action="reciprocal" title="Reciprocal" aria-label="Reciprocal">1/x</button>
+          <button class="btn scientific" data-action="percent" title="Percent" aria-label="Percent">%</button>
+          <button class="btn scientific" data-action="sin" title="Sine" aria-label="Sine">sin</button>
+          <button class="btn scientific" data-action="cos" title="Cosine" aria-label="Cosine">cos</button>
+          <button class="btn scientific" data-action="tan" title="Tangent" aria-label="Tangent">tan</button>
+          <button class="btn secondary" data-action="toggle-sign" title="Toggle sign" aria-label="Toggle sign">±</button>
         </div>
 
         <div class="angle-mode" aria-label="Angle mode selector">
@@ -55,7 +68,7 @@
           <button type="button" class="mode-btn" data-angle-mode="rad" aria-pressed="false">RAD</button>
         </div>
 
-        <div class="converter-panel">
+        <div class="converter-panel" aria-label="Unit converter">
           <div class="converter-row">
             <label for="unit-type">Type</label>
             <select id="unit-type">
@@ -105,7 +118,7 @@
           <button id="convert-btn" class="btn secondary convert-btn" type="button">Convert</button>
         </div>
 
-        <div class="buttons">
+        <div class="buttons" aria-label="Calculator keypad">
           <button class="btn secondary" data-action="clear">C</button>
           <button class="btn secondary" data-action="delete">DEL</button>
           <button class="btn secondary" data-value="/">÷</button>

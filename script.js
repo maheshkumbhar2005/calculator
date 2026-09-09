@@ -28,6 +28,7 @@ import {
 
 const display = document.getElementById('display');
 const themeToggle = document.getElementById('theme-toggle');
+const historyToggle = document.getElementById('history-toggle');
 const memoryIndicator = document.getElementById('memory-indicator');
 const historyList = document.getElementById('history-list');
 const angleStatus = document.getElementById('angle-status');
@@ -40,6 +41,31 @@ const memory = createMemoryState();
 const history = createHistoryState();
 let expression = '';
 let angleMode = 'deg';
+let calculatorMode = 'standard';
+
+const setCalculatorMode = (mode) => {
+  if (!['standard', 'scientific', 'converter'].includes(mode)) {
+    return;
+  }
+
+  calculatorMode = mode;
+  document.body.dataset.mode = mode;
+
+  document.querySelectorAll('[data-calculator-mode]').forEach((button) => {
+    const isActive = button.dataset.calculatorMode === mode;
+    button.classList.toggle('is-active', isActive);
+    button.setAttribute('aria-pressed', String(isActive));
+  });
+};
+
+const toggleHistoryDrawer = (open) => {
+  const isOpen = typeof open === 'boolean' ? open : document.body.dataset.historyOpen !== 'true';
+  document.body.dataset.historyOpen = String(isOpen);
+
+  if (historyToggle) {
+    historyToggle.setAttribute('aria-expanded', String(isOpen));
+  }
+};
 
 const setAngleMode = (mode) => {
   if (mode !== 'deg' && mode !== 'rad') {
@@ -560,54 +586,72 @@ powerButton.className = 'btn scientific';
 powerButton.type = 'button';
 powerButton.dataset.action = 'power';
 powerButton.textContent = 'xʸ';
+powerButton.title = 'Power';
+powerButton.setAttribute('aria-label', 'Power');
 
 const piButton = document.createElement('button');
 piButton.className = 'btn scientific';
 piButton.type = 'button';
 piButton.dataset.action = 'pi';
 piButton.textContent = 'π';
+piButton.title = 'Pi';
+piButton.setAttribute('aria-label', 'Pi');
 
 const eButton = document.createElement('button');
 eButton.className = 'btn scientific';
 eButton.type = 'button';
 eButton.dataset.action = 'e';
 eButton.textContent = 'e';
+eButton.title = 'Euler\'s number';
+eButton.setAttribute('aria-label', 'Euler\'s number');
 
 const logButton = document.createElement('button');
 logButton.className = 'btn scientific';
 logButton.type = 'button';
 logButton.dataset.action = 'log';
 logButton.textContent = 'log';
+logButton.title = 'Logarithm';
+logButton.setAttribute('aria-label', 'Logarithm');
 
 const lnButton = document.createElement('button');
 lnButton.className = 'btn scientific';
 lnButton.type = 'button';
 lnButton.dataset.action = 'ln';
 lnButton.textContent = 'ln';
+lnButton.title = 'Natural log';
+lnButton.setAttribute('aria-label', 'Natural log');
 
 const asinButton = document.createElement('button');
 asinButton.className = 'btn scientific';
 asinButton.type = 'button';
 asinButton.dataset.action = 'asin';
 asinButton.textContent = 'asin';
+asinButton.title = 'Inverse sine';
+asinButton.setAttribute('aria-label', 'Inverse sine');
 
 const acosButton = document.createElement('button');
 acosButton.className = 'btn scientific';
 acosButton.type = 'button';
 acosButton.dataset.action = 'acos';
 acosButton.textContent = 'acos';
+acosButton.title = 'Inverse cosine';
+acosButton.setAttribute('aria-label', 'Inverse cosine');
 
 const atanButton = document.createElement('button');
 atanButton.className = 'btn scientific';
 atanButton.type = 'button';
 atanButton.dataset.action = 'atan';
 atanButton.textContent = 'atan';
+atanButton.title = 'Inverse tangent';
+atanButton.setAttribute('aria-label', 'Inverse tangent');
 
 const factorialButton = document.createElement('button');
 factorialButton.className = 'btn scientific';
 factorialButton.type = 'button';
 factorialButton.dataset.action = 'factorial';
 factorialButton.textContent = '!';
+factorialButton.title = 'Factorial';
+factorialButton.setAttribute('aria-label', 'Factorial');
 
 const scientificGrid = document.querySelector('.scientific-grid');
 if (scientificGrid) {
@@ -715,6 +759,18 @@ themeToggle.addEventListener('click', () => {
   updateTheme(nextTheme);
 });
 
+if (historyToggle) {
+  historyToggle.addEventListener('click', () => {
+    toggleHistoryDrawer();
+  });
+}
+
+document.querySelectorAll('[data-calculator-mode]').forEach((button) => {
+  button.addEventListener('click', () => {
+    setCalculatorMode(button.dataset.calculatorMode);
+  });
+});
+
 document.querySelectorAll('[data-angle-mode]').forEach((button) => {
   button.addEventListener('click', () => {
     setAngleMode(button.dataset.angleMode);
@@ -724,6 +780,7 @@ document.querySelectorAll('[data-angle-mode]').forEach((button) => {
 unitTypeSelect.addEventListener('change', updateUnitOptions);
 convertButton.addEventListener('click', handleUnitConversion);
 updateUnitOptions();
+setCalculatorMode('standard');
 setAngleMode('deg');
 updateTheme('dark');
 updateMemoryIndicator();
