@@ -13,13 +13,18 @@ import {
   convertWeight,
   createHistoryState,
   createMemoryState,
+  exportHistoryAsCSV,
+  exportHistoryAsTXT,
   factorialValue,
+  formatHistoryEntry,
   formatNumber,
   fromRadians,
   lnValue,
   logValue,
+  parseHistoryEntry,
   percentValue,
   powerValue,
+  prepareResultForClipboard,
   reciprocalValue,
   sqrtValue,
   squareValue,
@@ -27,8 +32,13 @@ import {
 } from './calculator.js';
 
 const display = document.getElementById('display');
+const copyButton = document.getElementById('copy-btn');
+const copyButtonText = document.getElementById('copy-btn-text');
 const themeToggle = document.getElementById('theme-toggle');
 const historyToggle = document.getElementById('history-toggle');
+const historyClearBtn = document.getElementById('history-clear');
+const exportCsvBtn = document.getElementById('export-csv-btn');
+const exportTxtBtn = document.getElementById('export-txt-btn');
 const memoryIndicator = document.getElementById('memory-indicator');
 const historyList = document.getElementById('history-list');
 const angleStatus = document.getElementById('angle-status');
@@ -39,9 +49,31 @@ const convertButton = document.getElementById('convert-btn');
 
 const memory = createMemoryState();
 const history = createHistoryState();
+
 let expression = '';
+let lastAnswer = 0;
 let angleMode = 'deg';
 let calculatorMode = 'standard';
+
+const mapErrorMessage = (msg) => {
+  const lower = String(msg || '').toLowerCase();
+  if (lower.includes('divide by zero')) {
+    return 'Cannot divide by zero';
+  }
+  if (lower.includes('invalid input')) {
+    return 'Invalid input';
+  }
+  return 'Invalid Expression';
+};
+
+const showError = (rawMsg) => {
+  const message = mapErrorMessage(rawMsg);
+  expression = '';
+  if (display) {
+    display.value = message;
+    display.classList.add('error-state');
+  }
+};
 
 const setCalculatorMode = (mode) => {
   if (!['standard', 'scientific', 'converter'].includes(mode)) {
@@ -91,27 +123,36 @@ const formatDisplayValue = (value) => {
     return '0';
   }
 
-  if (/^[0-9+\-*/().\s]+$/.test(text)) {
+  if (/^[0-9+\-*/^().\s]+$/.test(text)) {
     return text;
   }
 
   const number = Number(text);
   if (!Number.isFinite(number)) {
-    return 'Error';
+    return text;
   }
 
   return formatNumber(number);
 };
 
 const updateDisplay = (value) => {
-  display.value = String(value || '0');
+  if (display) {
+    display.classList.remove('error-state');
+    display.value = String(value || '0');
+  }
 };
 
 const updateMemoryIndicator = () => {
-  memoryIndicator.textContent = `M: ${formatNumber(memory.recall())}`;
+  if (memoryIndicator) {
+    memoryIndicator.textContent = `M: ${formatNumber(memory.recall())}`;
+  }
 };
 
 const renderHistory = () => {
+  if (!historyList) {
+    return;
+  }
+
   const entries = history.getEntries();
   historyList.innerHTML = '';
 
@@ -123,56 +164,68 @@ const renderHistory = () => {
     return;
   }
 
-  entries.slice(-8).reverse().forEach((entry, index) => {
+  entries.slice(-20).reverse().forEach((rawEntry, index) => {
+    const actualIndex = entries.length - 1 - index;
+    const parsed = parseHistoryEntry(rawEntry);
+
     const item = document.createElement('li');
     item.className = 'history-item';
-
-    const label = document.createElement('span');
-    label.className = 'history-label';
-    label.textContent = entry;
-
-    const actualIndex = entries.length - 1 - index;
     item.dataset.historyIndex = String(actualIndex);
 
-    const reuseButton = document.createElement('button');
-    reuseButton.type = 'button';
-    reuseButton.className = 'history-reuse';
-    reuseButton.textContent = 'Reuse';
-    reuseButton.addEventListener('click', (event) => {
-      event.stopPropagation();
-      const selectedEntry = history.select(actualIndex);
-      if (selectedEntry) {
-        expression = selectedEntry;
-        updateDisplay(formatDisplayValue(expression));
+    const info = document.createElement('div');
+    info.className = 'history-info';
+
+    const eq = document.createElement('div');
+    eq.className = 'history-equation';
+    eq.textContent = parsed.expression ? `${parsed.expression} = ${parsed.result}` : parsed.result;
+
+    const time = document.createElement('div');
+    time.className = 'history-time';
+    time.textContent = parsed.timestamp || 'Recent';
+
+    info.appendChild(eq);
+    info.appendChild(time);
+
+    const actions = document.createElement('div');
+    actions.className = 'history-actions';
+
+    const reuseBtn = document.createElement('button');
+    reuseBtn.type = 'button';
+    reuseBtn.className = 'history-reuse';
+    reuseBtn.textContent = 'Reuse';
+    reuseBtn.title = 'Reuse result in calculator';
+    reuseBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      expression = parsed.result;
+      const num = Number(parsed.result);
+      if (Number.isFinite(num)) {
+        lastAnswer = num;
       }
+      updateDisplay(formatDisplayValue(expression));
     });
 
-    const deleteButton = document.createElement('button');
-    deleteButton.type = 'button';
-    deleteButton.className = 'history-delete';
-    deleteButton.textContent = '×';
-    deleteButton.setAttribute('aria-label', `Delete history entry ${actualIndex + 1}`);
-    deleteButton.addEventListener('click', (event) => {
-      event.stopPropagation();
+    const deleteBtn = document.createElement('button');
+    deleteBtn.type = 'button';
+    deleteBtn.className = 'history-delete';
+    deleteBtn.textContent = '×';
+    deleteBtn.title = 'Delete history entry';
+    deleteBtn.setAttribute('aria-label', `Delete calculation entry`);
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
       history.remove(actualIndex);
       renderHistory();
     });
 
-    item.addEventListener('click', (event) => {
-      if (event.target instanceof HTMLElement && event.target.closest('button')) {
-        return;
-      }
+    actions.appendChild(reuseBtn);
+    actions.appendChild(deleteBtn);
 
-      const selectedEntry = history.select(actualIndex);
-      if (selectedEntry) {
-        expression = selectedEntry;
-        updateDisplay(formatDisplayValue(expression));
-      }
+    item.addEventListener('click', () => {
+      expression = parsed.result;
+      updateDisplay(formatDisplayValue(expression));
     });
 
-    item.appendChild(label);
-    item.appendChild(reuseButton);
-    item.appendChild(deleteButton);
+    item.appendChild(info);
+    item.appendChild(actions);
     historyList.appendChild(item);
   });
 };
@@ -187,19 +240,21 @@ const clearHistory = () => {
   renderHistory();
 };
 
-const removeHistoryEntry = (index) => {
-  history.remove(index);
-  renderHistory();
-};
-
 const updateTheme = (theme) => {
   document.body.dataset.theme = theme;
-  themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+  try {
+    localStorage.setItem('calculator-theme', theme);
+  } catch {
+    // Storage access restricted
+  }
+  if (themeToggle) {
+    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+  }
 };
 
 const appendValue = (value) => {
-  if (expression === 'Error') {
-    expression = '';
+  if (display?.classList.contains('error-state')) {
+    clearExpression();
   }
 
   if (value === '.' && expression === '') {
@@ -218,17 +273,19 @@ const appendValue = (value) => {
     return;
   }
 
-  if (['+', '-', '*', '/'].includes(value)) {
+  if (['+', '-', '*', '/', '^'].includes(value)) {
     const lastChar = expression.slice(-1);
     if (!expression) {
       if (value === '-') {
         expression += value;
+      } else {
+        expression = `${lastAnswer}${value}`;
       }
       updateDisplay(expression || '0');
       return;
     }
 
-    if (['+', '-', '*', '/'].includes(lastChar)) {
+    if (['+', '-', '*', '/', '^'].includes(lastChar)) {
       expression = expression.slice(0, -1) + value;
       updateDisplay(expression);
       return;
@@ -237,6 +294,8 @@ const appendValue = (value) => {
 
   if (value === '(') {
     if (expression && /[0-9)]$/.test(expression)) {
+      expression += '*' + value;
+      updateDisplay(expression);
       return;
     }
     expression += value;
@@ -258,8 +317,23 @@ const appendValue = (value) => {
 };
 
 const deleteLast = () => {
+  if (display?.classList.contains('error-state')) {
+    clearExpression();
+    return;
+  }
   expression = expression.slice(0, -1);
   updateDisplay(expression ? formatDisplayValue(expression) : '0');
+};
+
+const applyAnsAction = () => {
+  if (display?.classList.contains('error-state') || !expression || expression === '0') {
+    expression = String(lastAnswer);
+  } else if (/[+\-*/^(]$/.test(expression)) {
+    expression += String(lastAnswer);
+  } else {
+    expression += '*' + String(lastAnswer);
+  }
+  updateDisplay(formatDisplayValue(expression));
 };
 
 const applyMemoryAction = (action) => {
@@ -281,7 +355,7 @@ const applyMemoryAction = (action) => {
   }
 
   const value = Number(expression);
-  if (Number.isNaN(value)) {
+  if (!Number.isFinite(value)) {
     return;
   }
 
@@ -297,40 +371,40 @@ const applyMemoryAction = (action) => {
 };
 
 const applyScientificAction = (action) => {
+  if (action === 'ans') {
+    applyAnsAction();
+    return;
+  }
+
   if (action === 'pi') {
-    expression = `${expression}${Math.PI}`;
-    updateDisplay(formatDisplayValue(expression));
+    if (expression && /[0-9)]$/.test(expression)) {
+      expression += '*pi';
+    } else {
+      expression += 'pi';
+    }
+    updateDisplay(expression);
     return;
   }
 
   if (action === 'e') {
-    expression = `${expression}${Math.E}`;
-    updateDisplay(formatDisplayValue(expression));
-    return;
-  }
-
-  if (action === 'factorial') {
-    if (!expression) {
-      return;
+    if (expression && /[0-9)]$/.test(expression)) {
+      expression += '*e';
+    } else {
+      expression += 'e';
     }
-
-    try {
-      const value = Number(expression);
-      expression = String(factorialValue(value));
-      updateDisplay(formatDisplayValue(expression));
-    } catch (error) {
-      expression = '';
-      updateDisplay('Error');
-    }
+    updateDisplay(expression);
     return;
   }
 
-  if (!expression) {
+  if (action === 'power') {
+    appendValue('^');
     return;
   }
+
+  const currentVal = expression || (display?.value && !display.classList.contains('error-state') ? display.value : '0');
 
   try {
-    const value = Number(expression);
+    const value = calculateExpression(currentVal, { ans: lastAnswer });
     let nextValue = value;
 
     switch (action) {
@@ -350,14 +424,19 @@ const applyScientificAction = (action) => {
         nextValue = -value;
         break;
       case 'sin':
-        nextValue = Math.sin(toRadians(value, angleMode));
+        nextValue = Number(Math.sin(toRadians(value, angleMode)).toFixed(10));
         break;
       case 'cos':
-        nextValue = Math.cos(toRadians(value, angleMode));
+        nextValue = Number(Math.cos(toRadians(value, angleMode)).toFixed(10));
         break;
-      case 'tan':
-        nextValue = Math.tan(toRadians(value, angleMode));
+      case 'tan': {
+        const rad = toRadians(value, angleMode);
+        if (Math.abs(Math.cos(rad)) < 1e-15) {
+          throw new Error('Invalid input');
+        }
+        nextValue = Number(Math.tan(rad).toFixed(10));
         break;
+      }
       case 'log':
         nextValue = logValue(value);
         break;
@@ -373,15 +452,18 @@ const applyScientificAction = (action) => {
       case 'atan':
         nextValue = atanValue(value, angleMode);
         break;
+      case 'factorial':
+        nextValue = factorialValue(value);
+        break;
       default:
         return;
     }
 
+    lastAnswer = nextValue;
     expression = String(nextValue);
     updateDisplay(formatDisplayValue(expression));
   } catch (error) {
-    expression = '';
-    updateDisplay('Error');
+    showError(error.message);
   }
 };
 
@@ -406,7 +488,7 @@ const unitCategories = {
       ft: 'ft',
       yd: 'yd',
     },
-    defaults: ['cm', 'm'],
+    defaults: ['m', 'ft'],
   },
   weight: {
     label: 'Weight',
@@ -468,7 +550,7 @@ const unitCategories = {
     defaults: ['min', 'h'],
   },
   data: {
-    label: 'Data',
+    label: 'Data storage',
     units: {
       bit: 'bit',
       byte: 'B',
@@ -482,8 +564,11 @@ const unitCategories = {
 };
 
 const updateUnitOptions = () => {
+  if (!unitTypeSelect || !fromUnitSelect || !toUnitSelect) {
+    return;
+  }
   const type = unitTypeSelect.value;
-  const category = unitCategories[type] || unitCategories.length;
+  const category = unitCategories[type] || unitCategories.temperature;
   const options = Object.entries(category.units);
 
   const buildOptions = (select, selected) => {
@@ -498,9 +583,9 @@ const updateUnitOptions = () => {
 };
 
 const handleUnitConversion = () => {
-  const value = Number(expression || display.value);
+  const value = Number(expression || display?.value);
   if (!Number.isFinite(value)) {
-    updateDisplay('Error');
+    showError('Invalid input');
     return;
   }
 
@@ -510,7 +595,6 @@ const handleUnitConversion = () => {
 
   try {
     let result;
-
     if (type === 'temperature') {
       result = convertTemperature(value, fromUnit, toUnit);
     } else if (type === 'length') {
@@ -528,13 +612,14 @@ const handleUnitConversion = () => {
     } else if (type === 'data') {
       result = convertData(value, fromUnit, toUnit);
     } else {
-      throw new Error('Unsupported conversion type');
+      throw new Error('Invalid input');
     }
 
+    lastAnswer = result;
     expression = String(result);
     updateDisplay(formatDisplayValue(expression));
   } catch (error) {
-    updateDisplay('Error');
+    showError('Invalid input');
   }
 };
 
@@ -545,16 +630,132 @@ const evaluate = () => {
   }
 
   try {
-    const result = calculateExpression(expression);
+    const rawExpression = expression;
+    const result = calculateExpression(expression, { ans: lastAnswer });
+    lastAnswer = result;
+    const formattedResult = formatDisplayValue(result);
+
+    const historyEntry = formatHistoryEntry(rawExpression, formattedResult, new Date());
+    history.add(historyEntry);
+
     expression = String(result);
-    history.add(expression);
-    updateDisplay(formatDisplayValue(expression));
+    updateDisplay(formattedResult);
     renderHistory();
   } catch (error) {
-    expression = '';
-    updateDisplay('Error');
+    showError(error.message);
   }
 };
+
+const copyResultToClipboard = async () => {
+  const textToCopy = prepareResultForClipboard(display?.value || expression);
+  let success = false;
+
+  if (navigator?.clipboard?.writeText && window.isSecureContext) {
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      success = true;
+    } catch {
+      success = false;
+    }
+  }
+
+  if (!success) {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = textToCopy;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      textarea.style.top = '0';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+    } catch {
+      success = false;
+    }
+  }
+
+  if (copyButton) {
+    copyButton.classList.add('copied');
+    if (copyButtonText) {
+      copyButtonText.textContent = success ? 'Copied!' : 'Failed';
+    }
+    setTimeout(() => {
+      copyButton.classList.remove('copied');
+      if (copyButtonText) {
+        copyButtonText.textContent = 'Copy Result';
+      }
+    }, 1800);
+  }
+
+  return success;
+};
+
+const downloadFile = (content, filename, type) => {
+  const blob = new Blob([content], { type });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+};
+
+// Event Listeners
+if (copyButton) {
+  copyButton.addEventListener('click', () => {
+    copyResultToClipboard();
+  });
+}
+
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
+    updateTheme(nextTheme);
+  });
+}
+
+if (historyToggle) {
+  historyToggle.addEventListener('click', () => {
+    toggleHistoryDrawer();
+  });
+}
+
+if (historyClearBtn) {
+  historyClearBtn.addEventListener('click', () => {
+    clearHistory();
+  });
+}
+
+if (exportCsvBtn) {
+  exportCsvBtn.addEventListener('click', () => {
+    const csv = history.exportAsCSV ? history.exportAsCSV() : exportHistoryAsCSV(history.getEntries());
+    downloadFile(csv, 'calculator-history.csv', 'text/csv;charset=utf-8;');
+  });
+}
+
+if (exportTxtBtn) {
+  exportTxtBtn.addEventListener('click', () => {
+    const txt = history.exportAsTXT ? history.exportAsTXT() : exportHistoryAsTXT(history.getEntries());
+    downloadFile(txt, 'calculator-history.txt', 'text/plain;charset=utf-8;');
+  });
+}
+
+document.querySelectorAll('[data-calculator-mode]').forEach((button) => {
+  button.addEventListener('click', () => {
+    setCalculatorMode(button.dataset.calculatorMode);
+  });
+});
+
+document.querySelectorAll('[data-angle-mode]').forEach((button) => {
+  button.addEventListener('click', () => {
+    setAngleMode(button.dataset.angleMode);
+  });
+});
 
 document.querySelectorAll('[data-value]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -573,6 +774,8 @@ document.querySelectorAll('[data-action]').forEach((button) => {
       evaluate();
     } else if (action === 'clear-history') {
       clearHistory();
+    } else if (action === 'ans') {
+      applyAnsAction();
     } else if (action.startsWith('memory-')) {
       applyMemoryAction(action);
     } else {
@@ -581,208 +784,117 @@ document.querySelectorAll('[data-action]').forEach((button) => {
   });
 });
 
-const powerButton = document.createElement('button');
-powerButton.className = 'btn scientific';
-powerButton.type = 'button';
-powerButton.dataset.action = 'power';
-powerButton.textContent = 'xʸ';
-powerButton.title = 'Power';
-powerButton.setAttribute('aria-label', 'Power');
-
-const piButton = document.createElement('button');
-piButton.className = 'btn scientific';
-piButton.type = 'button';
-piButton.dataset.action = 'pi';
-piButton.textContent = 'π';
-piButton.title = 'Pi';
-piButton.setAttribute('aria-label', 'Pi');
-
-const eButton = document.createElement('button');
-eButton.className = 'btn scientific';
-eButton.type = 'button';
-eButton.dataset.action = 'e';
-eButton.textContent = 'e';
-eButton.title = 'Euler\'s number';
-eButton.setAttribute('aria-label', 'Euler\'s number');
-
-const logButton = document.createElement('button');
-logButton.className = 'btn scientific';
-logButton.type = 'button';
-logButton.dataset.action = 'log';
-logButton.textContent = 'log';
-logButton.title = 'Logarithm';
-logButton.setAttribute('aria-label', 'Logarithm');
-
-const lnButton = document.createElement('button');
-lnButton.className = 'btn scientific';
-lnButton.type = 'button';
-lnButton.dataset.action = 'ln';
-lnButton.textContent = 'ln';
-lnButton.title = 'Natural log';
-lnButton.setAttribute('aria-label', 'Natural log');
-
-const asinButton = document.createElement('button');
-asinButton.className = 'btn scientific';
-asinButton.type = 'button';
-asinButton.dataset.action = 'asin';
-asinButton.textContent = 'asin';
-asinButton.title = 'Inverse sine';
-asinButton.setAttribute('aria-label', 'Inverse sine');
-
-const acosButton = document.createElement('button');
-acosButton.className = 'btn scientific';
-acosButton.type = 'button';
-acosButton.dataset.action = 'acos';
-acosButton.textContent = 'acos';
-acosButton.title = 'Inverse cosine';
-acosButton.setAttribute('aria-label', 'Inverse cosine');
-
-const atanButton = document.createElement('button');
-atanButton.className = 'btn scientific';
-atanButton.type = 'button';
-atanButton.dataset.action = 'atan';
-atanButton.textContent = 'atan';
-atanButton.title = 'Inverse tangent';
-atanButton.setAttribute('aria-label', 'Inverse tangent');
-
-const factorialButton = document.createElement('button');
-factorialButton.className = 'btn scientific';
-factorialButton.type = 'button';
-factorialButton.dataset.action = 'factorial';
-factorialButton.textContent = '!';
-factorialButton.title = 'Factorial';
-factorialButton.setAttribute('aria-label', 'Factorial');
-
-const scientificGrid = document.querySelector('.scientific-grid');
-if (scientificGrid) {
-  scientificGrid.appendChild(piButton);
-  scientificGrid.appendChild(eButton);
-  scientificGrid.appendChild(powerButton);
-  scientificGrid.appendChild(logButton);
-  scientificGrid.appendChild(lnButton);
-  scientificGrid.appendChild(asinButton);
-  scientificGrid.appendChild(acosButton);
-  scientificGrid.appendChild(atanButton);
-  scientificGrid.appendChild(factorialButton);
+if (unitTypeSelect) {
+  unitTypeSelect.addEventListener('change', updateUnitOptions);
 }
 
-historyList.addEventListener('click', (event) => {
-  const target = event.target;
-  if (!(target instanceof HTMLElement)) {
-    return;
-  }
+if (convertButton) {
+  convertButton.addEventListener('click', handleUnitConversion);
+}
 
-  const historyItem = target.closest('.history-item');
-  if (!historyItem) {
-    return;
-  }
-
-  const index = Number(historyItem.dataset.historyIndex);
-  if (Number.isNaN(index)) {
-    return;
-  }
-
-  if (target.classList.contains('history-delete')) {
-    removeHistoryEntry(index);
-    return;
-  }
-
-  if (target.classList.contains('history-reuse')) {
-    const selectedEntry = history.select(index);
-    if (selectedEntry) {
-      expression = selectedEntry;
-      updateDisplay(formatDisplayValue(expression));
-    }
-  }
-});
-
+// Keyboard shortcuts
 document.addEventListener('keydown', (event) => {
   const key = event.key;
+  const loweredKey = key.toLowerCase();
 
-  if (/^\d$/.test(key) || ['+', '-', '*', '/', '.'].includes(key)) {
+  // Ctrl+C / Cmd+C -> Copy result
+  if ((event.ctrlKey || event.metaKey) && loweredKey === 'c' && !window.getSelection()?.toString()) {
     event.preventDefault();
-    appendValue(key);
+    copyResultToClipboard();
     return;
   }
 
+  // Ctrl+H / Cmd+H -> History drawer
+  if ((event.ctrlKey || event.metaKey) && loweredKey === 'h') {
+    event.preventDefault();
+    toggleHistoryDrawer();
+    return;
+  }
+
+  // Enter or = -> Calculate
   if (key === 'Enter' || key === '=') {
     event.preventDefault();
     evaluate();
     return;
   }
 
+  // Backspace -> Delete
   if (key === 'Backspace') {
     event.preventDefault();
     deleteLast();
     return;
   }
 
+  // Escape -> Clear
   if (key === 'Escape') {
     event.preventDefault();
     clearExpression();
     return;
   }
 
-  const loweredKey = key.toLowerCase();
-  if (loweredKey === 's') {
+  // Digits and operators
+  if (/^\d$/.test(key) || ['+', '-', '*', '/', '.', '^', '(', ')'].includes(key)) {
     event.preventDefault();
-    applyScientificAction('sqrt');
-  } else if (loweredKey === 'q') {
-    event.preventDefault();
-    applyScientificAction('square');
-  } else if (loweredKey === 'r') {
-    event.preventDefault();
-    applyScientificAction('reciprocal');
-  } else if (loweredKey === 'p') {
-    event.preventDefault();
-    applyScientificAction('pi');
-  } else if (loweredKey === 'l') {
-    event.preventDefault();
-    applyScientificAction('log');
-  } else if (loweredKey === 'i') {
-    event.preventDefault();
-    applyScientificAction('ln');
-  } else if (loweredKey === 'c') {
-    event.preventDefault();
-    applyScientificAction('cos');
-  } else if (loweredKey === 't') {
-    event.preventDefault();
-    applyScientificAction('tan');
-  } else if (loweredKey === 'n') {
-    event.preventDefault();
-    applyScientificAction('toggle-sign');
+    appendValue(key);
+    return;
+  }
+
+  // Scientific shortcuts (without modifiers)
+  if (!event.ctrlKey && !event.altKey && !event.metaKey) {
+    if (loweredKey === 's') {
+      event.preventDefault();
+      applyScientificAction('sin');
+    } else if (loweredKey === 'c') {
+      event.preventDefault();
+      applyScientificAction('cos');
+    } else if (loweredKey === 't') {
+      event.preventDefault();
+      applyScientificAction('tan');
+    } else if (loweredKey === 'r') {
+      event.preventDefault();
+      applyScientificAction('sqrt');
+    } else if (loweredKey === 'p') {
+      event.preventDefault();
+      applyScientificAction('pi');
+    } else if (loweredKey === 'l') {
+      event.preventDefault();
+      applyScientificAction('log');
+    } else if (loweredKey === 'i') {
+      event.preventDefault();
+      applyScientificAction('ln');
+    } else if (loweredKey === 'q') {
+      event.preventDefault();
+      applyScientificAction('square');
+    } else if (loweredKey === 'a') {
+      event.preventDefault();
+      applyAnsAction();
+    }
   }
 });
 
-themeToggle.addEventListener('click', () => {
-  const nextTheme = document.body.dataset.theme === 'dark' ? 'light' : 'dark';
-  updateTheme(nextTheme);
-});
-
-if (historyToggle) {
-  historyToggle.addEventListener('click', () => {
-    toggleHistoryDrawer();
+// PWA Service Worker Registration
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch((err) => {
+      console.warn('PWA service worker registration failed:', err);
+    });
   });
 }
 
-document.querySelectorAll('[data-calculator-mode]').forEach((button) => {
-  button.addEventListener('click', () => {
-    setCalculatorMode(button.dataset.calculatorMode);
-  });
-});
-
-document.querySelectorAll('[data-angle-mode]').forEach((button) => {
-  button.addEventListener('click', () => {
-    setAngleMode(button.dataset.angleMode);
-  });
-});
-
-unitTypeSelect.addEventListener('change', updateUnitOptions);
-convertButton.addEventListener('click', handleUnitConversion);
+// Initial state initialization
 updateUnitOptions();
 setCalculatorMode('standard');
 setAngleMode('deg');
-updateTheme('dark');
+
+const savedTheme = (() => {
+  try {
+    return localStorage.getItem('calculator-theme') || 'dark';
+  } catch {
+    return 'dark';
+  }
+})();
+updateTheme(savedTheme);
+
 updateMemoryIndicator();
 renderHistory();
 clearExpression();

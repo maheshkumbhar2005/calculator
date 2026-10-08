@@ -1,9 +1,14 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Calculator</title>
+    <meta name="description" content="Scientific Calculator with Unit Converter, History, and Offline PWA support." />
+    <meta name="theme-color" content="#0f172a" />
+    <title>Scientific Calculator</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" type="image/svg+xml" href="icon.svg" />
+    <link rel="apple-touch-icon" href="icon.svg" />
     <link rel="stylesheet" href="style.css" />
   </head>
   <body data-theme="dark" data-mode="standard" data-history-open="false">
@@ -11,7 +16,11 @@
       <aside id="history-panel" class="history-panel" aria-label="Calculation history">
         <div class="history-header">
           <h2>History</h2>
-          <button class="history-clear" type="button" data-action="clear-history">Clear</button>
+          <div class="history-header-actions">
+            <button id="export-csv-btn" class="history-btn-small" type="button" title="Download history as CSV">CSV</button>
+            <button id="export-txt-btn" class="history-btn-small" type="button" title="Download history as TXT">TXT</button>
+            <button id="history-clear" class="history-clear" type="button" data-action="clear-history" title="Clear all calculations">Clear</button>
+          </div>
         </div>
         <ul id="history-list" class="history-list"></ul>
       </aside>
@@ -46,21 +55,41 @@
 
         <div class="display-wrapper">
           <div class="display-meta">
-            <span class="display-label">Expression</span>
-            <span id="angle-status" class="angle-status">DEG</span>
+            <div class="display-meta-left">
+              <span class="display-label">Expression</span>
+              <span id="angle-status" class="angle-status">DEG</span>
+            </div>
+            <button id="copy-btn" class="copy-btn" type="button" title="Copy result to clipboard" aria-label="Copy result">
+              <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+              <span id="copy-btn-text">Copy Result</span>
+            </button>
           </div>
           <input id="display" class="display" type="text" readonly value="0" aria-label="Calculator display" />
         </div>
 
         <div class="scientific-grid" aria-label="Scientific functions">
-          <button class="btn scientific" data-action="sqrt" title="Square root" aria-label="Square root">√</button>
-          <button class="btn scientific" data-action="square" title="Square" aria-label="Square">x²</button>
-          <button class="btn scientific" data-action="reciprocal" title="Reciprocal" aria-label="Reciprocal">1/x</button>
-          <button class="btn scientific" data-action="percent" title="Percent" aria-label="Percent">%</button>
           <button class="btn scientific" data-action="sin" title="Sine" aria-label="Sine">sin</button>
           <button class="btn scientific" data-action="cos" title="Cosine" aria-label="Cosine">cos</button>
           <button class="btn scientific" data-action="tan" title="Tangent" aria-label="Tangent">tan</button>
-          <button class="btn secondary" data-action="toggle-sign" title="Toggle sign" aria-label="Toggle sign">±</button>
+          <button class="btn scientific" data-action="pi" title="Pi (π)" aria-label="Pi">π</button>
+
+          <button class="btn scientific" data-action="asin" title="Arcsine" aria-label="Arcsine">asin</button>
+          <button class="btn scientific" data-action="acos" title="Arccosine" aria-label="Arccosine">acos</button>
+          <button class="btn scientific" data-action="atan" title="Arctangent" aria-label="Arctangent">atan</button>
+          <button class="btn scientific" data-action="e" title="Euler's Number (e)" aria-label="Euler's Number">e</button>
+
+          <button class="btn scientific" data-action="square" title="Square (x²)" aria-label="Square">x²</button>
+          <button class="btn scientific" data-action="power" title="Power (xʸ)" aria-label="Power">xʸ</button>
+          <button class="btn scientific" data-action="sqrt" title="Square root (√)" aria-label="Square root">√</button>
+          <button class="btn scientific" data-action="reciprocal" title="Reciprocal (1/x)" aria-label="Reciprocal">1/x</button>
+
+          <button class="btn scientific" data-action="log" title="Logarithm (base 10)" aria-label="Logarithm">log</button>
+          <button class="btn scientific" data-action="ln" title="Natural Logarithm (ln)" aria-label="Natural Logarithm">ln</button>
+          <button class="btn scientific" data-action="factorial" title="Factorial (n!)" aria-label="Factorial">n!</button>
+          <button class="btn secondary" data-action="toggle-sign" title="Toggle sign (±)" aria-label="Toggle sign">±</button>
         </div>
 
         <div class="angle-mode" aria-label="Angle mode selector">
@@ -79,7 +108,7 @@
               <option value="volume">Volume</option>
               <option value="speed">Speed</option>
               <option value="time">Time</option>
-              <option value="data">Data</option>
+              <option value="data">Data storage</option>
             </select>
           </div>
 
@@ -121,26 +150,28 @@
         <div class="buttons" aria-label="Calculator keypad">
           <button class="btn secondary" data-action="clear">C</button>
           <button class="btn secondary" data-action="delete">DEL</button>
+          <button class="btn secondary" data-action="percent">%</button>
           <button class="btn secondary" data-value="/">÷</button>
-          <button class="btn secondary" data-value="*">×</button>
 
           <button class="btn" data-value="7">7</button>
           <button class="btn" data-value="8">8</button>
           <button class="btn" data-value="9">9</button>
-          <button class="btn secondary" data-value="-">−</button>
+          <button class="btn secondary" data-value="*">×</button>
 
           <button class="btn" data-value="4">4</button>
           <button class="btn" data-value="5">5</button>
           <button class="btn" data-value="6">6</button>
-          <button class="btn secondary" data-value="+">+</button>
+          <button class="btn secondary" data-value="-">−</button>
 
           <button class="btn" data-value="1">1</button>
           <button class="btn" data-value="2">2</button>
           <button class="btn" data-value="3">3</button>
-          <button class="btn accent" data-action="equals">=</button>
+          <button class="btn secondary" data-value="+">+</button>
 
-          <button class="btn wide" data-value="0">0</button>
+          <button class="btn" data-value="0">0</button>
           <button class="btn" data-value=".">.</button>
+          <button class="btn secondary" data-action="ans" title="Previous Answer">ANS</button>
+          <button class="btn accent" data-action="equals">=</button>
         </div>
       </section>
     </main>

@@ -21,6 +21,11 @@ import {
   toRadians,
   fromRadians,
   formatNumber,
+  prepareResultForClipboard,
+  formatHistoryEntry,
+  parseHistoryEntry,
+  exportHistoryAsCSV,
+  exportHistoryAsTXT,
   createMemoryState,
   createHistoryState,
   convertTemperature,
@@ -172,4 +177,100 @@ test('advanced conversions work for common categories', () => {
   assert.equal(convertSpeed(100, 'km/h', 'm/s'), 27.77777777777778);
   assert.equal(convertTime(2, 'h', 'min'), 120);
   assert.equal(convertData(1, 'mb', 'kb'), 1024);
+});
+
+test('prepareResultForClipboard formats values cleanly', () => {
+  assert.equal(prepareResultForClipboard('42'), '42');
+  assert.equal(prepareResultForClipboard('  3.14  '), '3.14');
+  assert.equal(prepareResultForClipboard(''), '0');
+  assert.equal(prepareResultForClipboard(null), '0');
+  assert.equal(prepareResultForClipboard(undefined), '0');
+  assert.equal(prepareResultForClipboard(100), '100');
+});
+
+test('calculateExpression evaluates expressions with ANS', () => {
+  assert.equal(calculateExpression('ans + 10', { ans: 5 }), 15);
+  assert.equal(calculateExpression('2 * ans', 25), 50);
+  assert.equal(calculateExpression('ans ^ 2', { ans: 4 }), 16);
+  assert.equal(calculateExpression('ans / 2', { ans: 10 }), 5);
+});
+
+test('clear error handling throws specific error messages', () => {
+  assert.throws(() => calculateExpression('10 / 0'), /Cannot divide by zero|Division by zero/);
+  assert.throws(() => divide(10, 0), /Cannot divide by zero/);
+  assert.throws(() => reciprocalValue(0), /Cannot divide by zero/);
+  assert.throws(() => sqrtValue(-9), /Invalid input/);
+  assert.throws(() => logValue(-5), /Invalid input/);
+  assert.throws(() => lnValue(0), /Invalid input/);
+  assert.throws(() => factorialValue(-3), /Invalid input/);
+  assert.throws(() => factorialValue(3.14), /Invalid input/);
+  assert.throws(() => asinValue(2), /Invalid input/);
+  assert.throws(() => calculateExpression(null), /Invalid input/);
+  assert.throws(() => calculateExpression(''), /Invalid expression/);
+});
+
+test('extended scientific calculations evaluate accurately', () => {
+  assert.equal(logValue(1000), 3);
+  assert.equal(lnValue(Math.E), 1);
+  assert.equal(squareValue(8), 64);
+  assert.equal(powerValue(5, 3), 125);
+  assert.equal(factorialValue(0), 1);
+  assert.equal(factorialValue(1), 1);
+  assert.equal(factorialValue(6), 720);
+  assert.equal(asinValue(1, 'deg'), 90);
+  assert.equal(acosValue(1, 'deg'), 0);
+  assert.equal(atanValue(0, 'deg'), 0);
+  assert.equal(calculateExpression('pi * 2'), Math.PI * 2);
+  assert.equal(calculateExpression('e * 3'), Math.E * 3);
+});
+
+test('history formatting and export work correctly', () => {
+  const testDate = new Date('2026-10-08T12:45:00');
+  const formatted = formatHistoryEntry('10 + 20', '30', testDate);
+  assert.match(formatted, /10 \+ 20 = 30 —/);
+
+  const parsed = parseHistoryEntry('10 + 20 = 30 — 12:45 PM');
+  assert.equal(parsed.expression, '10 + 20');
+  assert.equal(parsed.result, '30');
+  assert.equal(parsed.timestamp, '12:45 PM');
+
+  const history = createHistoryState('test-export-history');
+  history.clear();
+  history.add('10 + 20 = 30 — 12:45 PM');
+  history.add('5 * 5 = 25 — 12:46 PM');
+
+  const csv = history.exportAsCSV();
+  assert.match(csv, /Expression,Result,Timestamp/);
+  assert.match(csv, /"10 \+ 20","30","12:45 PM"/);
+
+  const txt = history.exportAsTXT();
+  assert.match(txt, /Calculation History/);
+  assert.match(txt, /10 \+ 20 = 30 — 12:45 PM/);
+
+  history.clear();
+  assert.equal(history.getEntries().length, 0);
+});
+
+test('all unit converter categories handle bidirectional conversions', () => {
+  // Length
+  assert.equal(convertLength(1000, 'm', 'km'), 1);
+  assert.equal(Math.round(convertLength(12, 'in', 'ft')), 1);
+  // Weight
+  assert.equal(convertWeight(1000, 'g', 'kg'), 1);
+  assert.equal(convertWeight(16, 'oz', 'lb'), 1);
+  // Temperature
+  assert.equal(convertTemperature(0, 'c', 'f'), 32);
+  assert.equal(convertTemperature(373.15, 'k', 'c'), 100);
+  // Area
+  assert.equal(convertArea(10000, 'cm2', 'm2'), 1);
+  // Volume
+  assert.equal(convertVolume(1000, 'ml', 'l'), 1);
+  // Speed
+  assert.equal(convertSpeed(36, 'km/h', 'm/s'), 10);
+  // Time
+  assert.equal(convertTime(60, 's', 'min'), 1);
+  assert.equal(convertTime(24, 'h', 'day'), 1);
+  // Data
+  assert.equal(convertData(8, 'bit', 'byte'), 1);
+  assert.equal(convertData(1024, 'gb', 'tb'), 1);
 });

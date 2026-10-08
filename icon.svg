@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e293b"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f97316"/>
+      <stop offset="100%" stop-color="#ea580c"/>
+    </linearGradient>
+    <linearGradient id="screenGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#090d16"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad)"/>
+  <rect x="16" y="16" width="480" height="480" rx="96" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="4"/>
+
+  <!-- Display -->
+  <rect x="64" y="64" width="384" height="110" rx="24" fill="url(#screenGrad)" stroke="rgba(255,255,255,0.16)" stroke-width="3"/>
+  <text x="420" y="142" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-size="56" font-weight="700" fill="#38bdf8" text-anchor="end">123.45</text>
+
+  <!-- Keypad Grid -->
+  <!-- Row 1 -->
+  <rect x="64" y="206" width="82" height="60" rx="16" fill="#334155"/>
+  <text x="105" y="246" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">C</text>
+
+  <rect x="164" y="206" width="82" height="60" rx="16" fill="#334155"/>
+  <text x="205" y="246" font-family="sans-serif" font-size="26" font-weight="700" fill="#38bdf8" text-anchor="middle">√</text>
+
+  <rect x="264" y="206" width="82" height="60" rx="16" fill="#334155"/>
+  <text x="305" y="246" font-family="sans-serif" font-size="28" font-weight="700" fill="#38bdf8" text-anchor="middle">%</text>
+
+  <rect x="366" y="206" width="82" height="60" rx="16" fill="#38bdf8"/>
+  <text x="407" y="246" font-family="sans-serif" font-size="32" font-weight="700" fill="#0f172a" text-anchor="middle">÷</text>
+
+  <!-- Row 2 -->
+  <rect x="64" y="282" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="105" y="322" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">7</text>
+
+  <rect x="164" y="282" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="205" y="322" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">8</text>
+
+  <rect x="264" y="282" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="305" y="322" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">9</text>
+
+  <rect x="366" y="282" width="82" height="60" rx="16" fill="#38bdf8"/>
+  <text x="407" y="322" font-family="sans-serif" font-size="32" font-weight="700" fill="#0f172a" text-anchor="middle">×</text>
+
+  <!-- Row 3 -->
+  <rect x="64" y="358" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="105" y="398" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">4</text>
+
+  <rect x="164" y="358" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="205" y="398" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">5</text>
+
+  <rect x="264" y="358" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="305" y="398" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">6</text>
+
+  <rect x="366" y="358" width="82" height="60" rx="16" fill="#38bdf8"/>
+  <text x="407" y="398" font-family="sans-serif" font-size="32" font-weight="700" fill="#0f172a" text-anchor="middle">−</text>
+
+  <!-- Row 4 -->
+  <rect x="64" y="434" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="105" y="474" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">1</text>
+
+  <rect x="164" y="434" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="205" y="474" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">2</text>
+
+  <rect x="264" y="434" width="82" height="60" rx="16" fill="#1e293b" stroke="rgba(255,255,255,0.1)"/>
+  <text x="305" y="474" font-family="sans-serif" font-size="28" font-weight="700" fill="#f8fafc" text-anchor="middle">3</text>
+
+  <rect x="366" y="434" width="82" height="60" rx="16" fill="url(#accentGrad)"/>
+  <text x="407" y="474" font-family="sans-serif" font-size="32" font-weight="700" fill="#ffffff" text-anchor="middle">=</text>
+</svg>

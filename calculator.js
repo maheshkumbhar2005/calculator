@@ -12,14 +12,14 @@ function multiply(a, b) {
 
 function divide(a, b) {
   if (b === 0) {
-    throw new Error('Division by zero is not allowed.');
+    throw new Error('Cannot divide by zero (Division by zero is not allowed)');
   }
   return a / b;
 }
 
 function sqrtValue(value) {
   if (value < 0) {
-    throw new Error('Square root of a negative number is not allowed.');
+    throw new Error('Invalid input');
   }
   return Math.sqrt(value);
 }
@@ -30,7 +30,7 @@ function squareValue(value) {
 
 function reciprocalValue(value) {
   if (value === 0) {
-    throw new Error('Division by zero is not allowed.');
+    throw new Error('Cannot divide by zero (Division by zero is not allowed)');
   }
   return 1 / value;
 }
@@ -59,28 +59,28 @@ function fromRadians(value, mode = 'deg') {
 
 function logValue(value) {
   if (value <= 0) {
-    throw new Error('Logarithm requires a positive value.');
+    throw new Error('Invalid input');
   }
   return Math.log10(value);
 }
 
 function lnValue(value) {
   if (value <= 0) {
-    throw new Error('Natural logarithm requires a positive value.');
+    throw new Error('Invalid input');
   }
   return Math.log(value);
 }
 
 function asinValue(value, mode = 'deg') {
   if (value < -1 || value > 1) {
-    throw new Error('asin requires a value between -1 and 1.');
+    throw new Error('Invalid input');
   }
   return Number(fromRadians(Math.asin(value), mode).toFixed(10));
 }
 
 function acosValue(value, mode = 'deg') {
   if (value < -1 || value > 1) {
-    throw new Error('acos requires a value between -1 and 1.');
+    throw new Error('Invalid input');
   }
   return Number(fromRadians(Math.acos(value), mode).toFixed(10));
 }
@@ -90,8 +90,8 @@ function atanValue(value, mode = 'deg') {
 }
 
 function factorialValue(value) {
-  if (!Number.isInteger(value) || value < 0) {
-    throw new Error('Factorial requires a non-negative integer.');
+  if (!Number.isInteger(value) || value < 0 || value > 170) {
+    throw new Error('Invalid input');
   }
 
   let result = 1;
@@ -450,12 +450,86 @@ function createHistoryState(storageKey = 'calculator-history') {
       writeEntries(entries);
       return entries;
     },
+    exportAsCSV() {
+      return exportHistoryAsCSV(entries);
+    },
+    exportAsTXT() {
+      return exportHistoryAsTXT(entries);
+    },
   };
 }
 
-function calculateExpression(expression) {
+function formatHistoryEntry(expression, result, date = new Date()) {
+  const timeStr = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  return `${expression} = ${result} — ${timeStr}`;
+}
+
+function parseHistoryEntry(entry) {
+  if (typeof entry === 'object' && entry !== null) {
+    return {
+      expression: entry.expression || '',
+      result: entry.result || '',
+      timestamp: entry.timestamp || '',
+      formatted: entry.formatted || `${entry.expression} = ${entry.result} — ${entry.timestamp}`,
+    };
+  }
+
+  const str = String(entry || '');
+  const dashIndex = str.lastIndexOf('—');
+  let equation = str;
+  let timestamp = '';
+
+  if (dashIndex !== -1) {
+    equation = str.slice(0, dashIndex).trim();
+    timestamp = str.slice(dashIndex + 1).trim();
+  }
+
+  const equalIndex = equation.indexOf('=');
+  let expression = equation;
+  let result = equation;
+
+  if (equalIndex !== -1) {
+    expression = equation.slice(0, equalIndex).trim();
+    result = equation.slice(equalIndex + 1).trim();
+  }
+
+  return {
+    expression,
+    result,
+    timestamp,
+    formatted: str,
+  };
+}
+
+function exportHistoryAsCSV(entries) {
+  const headers = ['Expression', 'Result', 'Timestamp'];
+  const rows = (entries || []).map((entry) => {
+    const parsed = parseHistoryEntry(entry);
+    return [
+      `"${parsed.expression.replace(/"/g, '""')}"`,
+      `"${parsed.result.replace(/"/g, '""')}"`,
+      `"${parsed.timestamp.replace(/"/g, '""')}"`,
+    ].join(',');
+  });
+  return [headers.join(','), ...rows].join('\r\n');
+}
+
+function exportHistoryAsTXT(entries) {
+  if (!entries || entries.length === 0) {
+    return 'No calculation history.';
+  }
+  const lines = entries.map((entry) => {
+    const parsed = parseHistoryEntry(entry);
+    return parsed.timestamp
+      ? `${parsed.expression} = ${parsed.result} — ${parsed.timestamp}`
+      : `${parsed.expression} = ${parsed.result}`;
+  });
+  return ['Calculation History', '===================', ...lines].join('\r\n');
+}
+
+function calculateExpression(expression, options = {}) {
   if (typeof expression !== 'string') {
-    throw new Error('Invalid expression');
+    throw new Error('Invalid input');
   }
 
   const sanitized = expression.replace(/\s+/g, '');
@@ -463,9 +537,14 @@ function calculateExpression(expression) {
     throw new Error('Invalid expression');
   }
 
+  const ansValue = typeof options === 'number'
+    ? options
+    : (options && Number.isFinite(options.ans) ? options.ans : 0);
+
   const constants = {
     pi: Math.PI,
     e: Math.E,
+    ans: ansValue,
   };
 
   let index = 0;
@@ -583,7 +662,7 @@ function calculateExpression(expression) {
 
       if (char === '/') {
         if (nextValue === 0) {
-          throw new Error('Division by zero is not allowed.');
+          throw new Error('Cannot divide by zero (Division by zero is not allowed)');
         }
         value /= nextValue;
       } else {
@@ -620,6 +699,14 @@ function calculateExpression(expression) {
   return result;
 }
 
+function prepareResultForClipboard(value) {
+  if (value === undefined || value === null) {
+    return '0';
+  }
+  const str = String(value).trim();
+  return str === '' ? '0' : str;
+}
+
 export {
   add,
   subtract,
@@ -648,6 +735,11 @@ export {
   convertTime,
   convertData,
   formatNumber,
+  prepareResultForClipboard,
+  formatHistoryEntry,
+  parseHistoryEntry,
+  exportHistoryAsCSV,
+  exportHistoryAsTXT,
   createMemoryState,
   createHistoryState,
 };
