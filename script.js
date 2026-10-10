@@ -969,9 +969,9 @@ const updateFinancialEmi = () => {
   if (p > 0 && r >= 0 && t > 0) {
     try {
       const { emi, totalPayment, totalInterest } = calculateEMI(p, r, t);
-      if (monthlyRes) monthlyRes.textContent = `$${formatNumber(emi)}`;
-      if (interestRes) interestRes.textContent = `$${formatNumber(totalInterest)}`;
-      if (totalRes) totalRes.textContent = `$${formatNumber(totalPayment)}`;
+      if (monthlyRes) monthlyRes.textContent = `₹${formatNumber(emi)}`;
+      if (interestRes) interestRes.textContent = `₹${formatNumber(totalInterest)}`;
+      if (totalRes) totalRes.textContent = `₹${formatNumber(totalPayment)}`;
     } catch {
       // ignore
     }
@@ -994,9 +994,9 @@ const updateFinancialTip = () => {
   if (bill >= 0 && pct >= 0 && people >= 1) {
     try {
       const { tipAmount, totalBill, perPerson } = calculateTip(bill, pct, people);
-      if (tipTotRes) tipTotRes.textContent = `$${formatNumber(tipAmount)}`;
-      if (billTotRes) billTotRes.textContent = `$${formatNumber(totalBill)}`;
-      if (personRes) personRes.textContent = `$${formatNumber(perPerson)}`;
+      if (tipTotRes) tipTotRes.textContent = `₹${formatNumber(tipAmount)}`;
+      if (billTotRes) billTotRes.textContent = `₹${formatNumber(totalBill)}`;
+      if (personRes) personRes.textContent = `₹${formatNumber(perPerson)}`;
     } catch {
       // ignore
     }
@@ -1019,9 +1019,9 @@ const updateFinancialDiscount = () => {
   if (price >= 0 && pct >= 0 && tax >= 0) {
     try {
       const { totalSavings, taxAmount, finalPrice } = calculateDiscount(price, pct, tax);
-      if (savRes) savRes.textContent = `$${formatNumber(totalSavings)}`;
-      if (taxRes) taxRes.textContent = `$${formatNumber(taxAmount)}`;
-      if (finalRes) finalRes.textContent = `$${formatNumber(finalPrice)}`;
+      if (savRes) savRes.textContent = `₹${formatNumber(totalSavings)}`;
+      if (taxRes) taxRes.textContent = `₹${formatNumber(taxAmount)}`;
+      if (finalRes) finalRes.textContent = `₹${formatNumber(finalPrice)}`;
     } catch {
       // ignore
     }
