@@ -22,6 +22,9 @@
             <button id="history-clear" class="history-clear" type="button" data-action="clear-history" title="Clear all calculations">Clear</button>
           </div>
         </div>
+        <div class="history-search-wrapper">
+          <input id="history-search" class="history-search" type="search" placeholder="Search history..." aria-label="Search history calculations" />
+        </div>
         <ul id="history-list" class="history-list"></ul>
       </aside>
 
@@ -38,13 +41,16 @@
             <div class="mode-switcher" role="tablist" aria-label="Calculator mode selector">
               <button type="button" class="mode-switch is-active" data-calculator-mode="standard" aria-pressed="true">Standard</button>
               <button type="button" class="mode-switch" data-calculator-mode="scientific" aria-pressed="false">Scientific</button>
+              <button type="button" class="mode-switch" data-calculator-mode="graph" aria-pressed="false">Graph</button>
+              <button type="button" class="mode-switch" data-calculator-mode="stats" aria-pressed="false">Stats</button>
               <button type="button" class="mode-switch" data-calculator-mode="programmer" aria-pressed="false">Programmer</button>
               <button type="button" class="mode-switch" data-calculator-mode="financial" aria-pressed="false">Financial</button>
               <button type="button" class="mode-switch" data-calculator-mode="converter" aria-pressed="false">Convert</button>
             </div>
+            <button id="constants-toggle" class="constants-toggle" type="button" aria-label="Scientific Constants" title="Physics & Chemistry Constants (π/c)">🔬</button>
             <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Toggle sound feedback" title="Toggle audio feedback">🔊</button>
             <button id="shortcuts-toggle" class="shortcuts-toggle" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">⌨️</button>
-            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
+            <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Cycle theme">☀️</button>
           </div>
         </div>
 
@@ -108,6 +114,65 @@
         <div class="angle-mode" aria-label="Angle mode selector">
           <button type="button" class="mode-btn is-active" data-angle-mode="deg" aria-pressed="true">DEG</button>
           <button type="button" class="mode-btn" data-angle-mode="rad" aria-pressed="false">RAD</button>
+        </div>
+
+        <!-- 2D Function Graphing Panel -->
+        <div id="graph-panel" class="graph-panel" aria-label="Function grapher">
+          <div class="graph-controls">
+            <div class="graph-input-row">
+              <span class="graph-fn-label">f(x) =</span>
+              <input id="graph-expr" class="graph-expr" type="text" value="sin(x)" placeholder="e.g. sin(x), x^2 - 4, cos(x)*x" />
+              <button id="graph-plot-btn" class="graph-plot-btn" type="button">Plot</button>
+            </div>
+            <div class="graph-presets" aria-label="Preset curves">
+              <button type="button" class="graph-preset is-active" data-preset="sin(x)">sin(x)</button>
+              <button type="button" class="graph-preset" data-preset="cos(x)">cos(x)</button>
+              <button type="button" class="graph-preset" data-preset="x^2 - 4">x² − 4</button>
+              <button type="button" class="graph-preset" data-preset="x^3 - 3*x">x³ − 3x</button>
+              <button type="button" class="graph-preset" data-preset="1/x">1/x</button>
+              <button type="button" class="graph-preset" data-preset="sqrt(x)">√x</button>
+            </div>
+          </div>
+          <div class="graph-canvas-container">
+            <canvas id="graph-canvas" width="600" height="300"></canvas>
+            <div id="graph-coords" class="graph-coords">x: 0.00, y: 0.00</div>
+            <div class="graph-zoom-actions">
+              <button id="graph-zoom-in" type="button" title="Zoom in">+</button>
+              <button id="graph-zoom-out" type="button" title="Zoom out">−</button>
+              <button id="graph-reset" type="button" title="Reset view">⟲</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Statistics Panel -->
+        <div id="stats-panel" class="stats-panel" aria-label="Statistics analyzer">
+          <div class="stats-input-section">
+            <div class="stats-input-header">
+              <label for="stats-input">Enter Dataset (comma or space separated numbers)</label>
+              <button id="stats-sample-btn" class="stats-link-btn" type="button">Load Sample</button>
+            </div>
+            <textarea id="stats-input" class="stats-input" rows="2" placeholder="e.g. 10, 15, 20, 25, 30, 35, 40">12, 18, 22, 28, 32, 35, 40, 45, 52</textarea>
+            <div class="stats-btn-row">
+              <button id="stats-calc-btn" class="stats-btn primary" type="button">Calculate Metrics</button>
+              <button id="stats-clear-btn" class="stats-btn secondary" type="button">Clear</button>
+            </div>
+          </div>
+
+          <div class="stats-cards-grid">
+            <div class="stats-card"><span class="stats-card-title">Count (N)</span><span id="stat-count" class="stats-card-val">0</span></div>
+            <div class="stats-card"><span class="stats-card-title">Sum (∑x)</span><span id="stat-sum" class="stats-card-val">0</span></div>
+            <div class="stats-card highlight"><span class="stats-card-title">Mean (Avg)</span><span id="stat-mean" class="stats-card-val">0</span></div>
+            <div class="stats-card"><span class="stats-card-title">Median</span><span id="stat-median" class="stats-card-val">0</span></div>
+            <div class="stats-card"><span class="stats-card-title">Mode</span><span id="stat-mode" class="stats-card-val">None</span></div>
+            <div class="stats-card"><span class="stats-card-title">Range</span><span id="stat-range" class="stats-card-val">0</span></div>
+            <div class="stats-card"><span class="stats-card-title">Variance (σ²)</span><span id="stat-var" class="stats-card-val">0</span></div>
+            <div class="stats-card highlight"><span class="stats-card-title">Std Dev (σ)</span><span id="stat-std" class="stats-card-val">0</span></div>
+          </div>
+
+          <div class="stats-chart-wrapper">
+            <div class="stats-chart-title">Data Distribution Chart</div>
+            <canvas id="stats-canvas" width="600" height="140"></canvas>
+          </div>
         </div>
 
         <!-- Programmer Panel -->
@@ -351,6 +416,20 @@
         </div>
       </section>
     </main>
+
+    <!-- Constants Library Modal -->
+    <dialog id="constants-modal" class="constants-modal" aria-labelledby="constants-title">
+      <div class="constants-content">
+        <div class="constants-header">
+          <h3 id="constants-title">Physics & Chemistry Constants</h3>
+          <button id="constants-close" class="constants-close-btn" type="button" aria-label="Close dialog">×</button>
+        </div>
+        <div class="constants-search-box">
+          <input id="constants-search" type="search" placeholder="Search constants (e.g. speed of light, planck)..." aria-label="Search constants" />
+        </div>
+        <div id="constants-list" class="constants-list"></div>
+      </div>
+    </dialog>
 
     <!-- Shortcuts Dialog Modal -->
     <dialog id="shortcuts-modal" class="shortcuts-modal" aria-labelledby="shortcuts-title">

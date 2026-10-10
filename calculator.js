@@ -864,6 +864,133 @@ function prepareResultForClipboard(value) {
   return str === '' ? '0' : str;
 }
 
+const PHYSICS_CONSTANTS = [
+  { symbol: 'c', name: 'Speed of Light', value: 299792458, unit: 'm/s' },
+  { symbol: 'h', name: 'Planck Constant', value: 6.62607015e-34, unit: 'J·s' },
+  { symbol: 'G', name: 'Gravitational Constant', value: 6.6743e-11, unit: 'N·m²/kg²' },
+  { symbol: 'N_A', name: 'Avogadro Constant', value: 6.02214076e23, unit: 'mol⁻¹' },
+  { symbol: 'e', name: 'Elementary Charge', value: 1.602176634e-19, unit: 'C' },
+  { symbol: 'm_e', name: 'Electron Mass', value: 9.1093837e-31, unit: 'kg' },
+  { symbol: 'm_p', name: 'Proton Mass', value: 1.67262192e-27, unit: 'kg' },
+  { symbol: 'k_B', name: 'Boltzmann Constant', value: 1.380649e-23, unit: 'J/K' },
+  { symbol: 'R', name: 'Gas Constant', value: 8.314462618, unit: 'J/(mol·K)' },
+  { symbol: 'g', name: 'Standard Gravity', value: 9.80665, unit: 'm/s²' },
+  { symbol: 'atm', name: 'Standard Atmosphere', value: 101325, unit: 'Pa' },
+];
+
+function calculateStatistics(input) {
+  let numbers = [];
+  if (Array.isArray(input)) {
+    numbers = input.map(Number).filter(Number.isFinite);
+  } else if (typeof input === 'string') {
+    numbers = input
+      .split(/[\s,]+/)
+      .map((s) => s.trim())
+      .filter((s) => s !== '' && !Number.isNaN(Number(s)))
+      .map(Number);
+  }
+
+  if (numbers.length === 0) {
+    throw new Error('Invalid input: at least one number required');
+  }
+
+  const n = numbers.length;
+  const sum = numbers.reduce((acc, v) => acc + v, 0);
+  const mean = sum / n;
+
+  const sorted = [...numbers].sort((a, b) => a - b);
+  const min = sorted[0];
+  const max = sorted[sorted.length - 1];
+  const range = max - min;
+
+  let median = 0;
+  const mid = Math.floor(n / 2);
+  if (n % 2 === 0) {
+    median = (sorted[mid - 1] + sorted[mid]) / 2;
+  } else {
+    median = sorted[mid];
+  }
+
+  const freq = new Map();
+  let maxFreq = 0;
+  for (const num of numbers) {
+    const count = (freq.get(num) || 0) + 1;
+    freq.set(num, count);
+    if (count > maxFreq) maxFreq = count;
+  }
+
+  const modes = [];
+  if (maxFreq > 1) {
+    for (const [num, count] of freq.entries()) {
+      if (count === maxFreq) modes.push(num);
+    }
+  }
+
+  const variance = numbers.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+
+  return {
+    count: n,
+    sum: Number(sum.toFixed(6)),
+    mean: Number(mean.toFixed(6)),
+    median: Number(median.toFixed(6)),
+    mode: modes.length > 0 ? modes.sort((a, b) => a - b) : null,
+    min: Number(min.toFixed(6)),
+    max: Number(max.toFixed(6)),
+    range: Number(range.toFixed(6)),
+    variance: Number(variance.toFixed(6)),
+    stdDev: Number(stdDev.toFixed(6)),
+  };
+}
+
+function evaluateFunctionAt(expression, x) {
+  if (typeof expression !== 'string' || !Number.isFinite(x)) {
+    throw new Error('Invalid input');
+  }
+
+  const sanitized = expression.trim().toLowerCase();
+  if (!sanitized) {
+    throw new Error('Empty expression');
+  }
+
+  const substituted = sanitized
+    .replace(/(^|[^a-zA-Z0-9_])x(?=[^a-zA-Z0-9_]|$)/g, `$1(${x})`)
+    .replace(/\^/g, '**');
+
+  const mathContext = {
+    sin: Math.sin,
+    cos: Math.cos,
+    tan: Math.tan,
+    asin: Math.asin,
+    acos: Math.acos,
+    atan: Math.atan,
+    sqrt: Math.sqrt,
+    abs: Math.abs,
+    log: Math.log10,
+    ln: Math.log,
+    exp: Math.exp,
+    pi: Math.PI,
+    e: Math.E,
+  };
+
+  const allowedChars = /^[0-9+\-*/^().eE\s,a-zA-Z*]+$/;
+  if (!allowedChars.test(substituted)) {
+    throw new Error('Invalid expression characters');
+  }
+
+  try {
+    const fn = new Function(...Object.keys(mathContext), `return (${substituted});`);
+    const val = fn(...Object.values(mathContext));
+
+    if (!Number.isFinite(val)) {
+      return null;
+    }
+    return val;
+  } catch {
+    return null;
+  }
+}
+
 export {
   add,
   subtract,
@@ -909,4 +1036,7 @@ export {
   calculateEMI,
   calculateTip,
   calculateDiscount,
+  calculateStatistics,
+  evaluateFunctionAt,
+  PHYSICS_CONSTANTS,
 };

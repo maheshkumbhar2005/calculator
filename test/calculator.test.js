@@ -46,6 +46,9 @@ import {
   calculateEMI,
   calculateTip,
   calculateDiscount,
+  calculateStatistics,
+  evaluateFunctionAt,
+  PHYSICS_CONSTANTS,
 } from '../calculator.js';
 
 test('add adds numbers correctly', () => {
@@ -338,4 +341,41 @@ test('financial discount and tax calculator computes savings accurately', () => 
   assert.equal(result.totalSavings, 40);
 
   assert.throws(() => calculateDiscount(-100, 10), /Invalid input/);
+});
+
+test('calculateStatistics computes dataset metrics accurately', () => {
+  const stats = calculateStatistics([10, 20, 20, 40, 50, 60]);
+  assert.equal(stats.count, 6);
+  assert.equal(stats.sum, 200);
+  assert.equal(Math.round(stats.mean), 33);
+  assert.equal(stats.median, 30);
+  assert.deepEqual(stats.mode, [20]);
+  assert.equal(stats.min, 10);
+  assert.equal(stats.max, 60);
+  assert.equal(stats.range, 50);
+
+  // String input
+  const strStats = calculateStatistics('5, 15, 25');
+  assert.equal(strStats.count, 3);
+  assert.equal(strStats.sum, 45);
+  assert.equal(strStats.mean, 15);
+  assert.equal(strStats.median, 15);
+
+  assert.throws(() => calculateStatistics([]), /Invalid input/);
+});
+
+test('evaluateFunctionAt evaluates mathematical expressions with x', () => {
+  assert.equal(evaluateFunctionAt('x^2 - 4', 3), 5);
+  assert.equal(evaluateFunctionAt('2*x + 1', 5), 11);
+  assert.equal(evaluateFunctionAt('sin(x)', 0), 0);
+  assert.equal(evaluateFunctionAt('cos(x)', 0), 1);
+  assert.equal(evaluateFunctionAt('1/x', 0), null);
+});
+
+test('PHYSICS_CONSTANTS contains verified scientific constants', () => {
+  assert.ok(PHYSICS_CONSTANTS.length >= 10);
+  const c = PHYSICS_CONSTANTS.find((item) => item.symbol === 'c');
+  assert.equal(c.value, 299792458);
+  const h = PHYSICS_CONSTANTS.find((item) => item.symbol === 'h');
+  assert.ok(h.value > 0);
 });

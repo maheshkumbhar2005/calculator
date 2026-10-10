@@ -39,6 +39,9 @@ import {
   calculateEMI,
   calculateTip,
   calculateDiscount,
+  calculateStatistics,
+  evaluateFunctionAt,
+  PHYSICS_CONSTANTS,
 } from './calculator.js';
 
 const display = document.getElementById('display');
@@ -50,8 +53,14 @@ const soundToggle = document.getElementById('sound-toggle');
 const shortcutsToggle = document.getElementById('shortcuts-toggle');
 const shortcutsModal = document.getElementById('shortcuts-modal');
 const shortcutsClose = document.getElementById('shortcuts-close');
+const constantsToggle = document.getElementById('constants-toggle');
+const constantsModal = document.getElementById('constants-modal');
+const constantsClose = document.getElementById('constants-close');
+const constantsSearch = document.getElementById('constants-search');
+const constantsList = document.getElementById('constants-list');
 const historyToggle = document.getElementById('history-toggle');
 const historyClearBtn = document.getElementById('history-clear');
+const historySearch = document.getElementById('history-search');
 const exportCsvBtn = document.getElementById('export-csv-btn');
 const exportTxtBtn = document.getElementById('export-txt-btn');
 const memoryIndicator = document.getElementById('memory-indicator');
@@ -61,6 +70,28 @@ const unitTypeSelect = document.getElementById('unit-type');
 const fromUnitSelect = document.getElementById('from-unit');
 const toUnitSelect = document.getElementById('to-unit');
 const convertButton = document.getElementById('convert-btn');
+
+// Programmer DOM elements
+const baseHex = document.getElementById('base-hex');
+const baseDec = document.getElementById('base-dec');
+const baseOct = document.getElementById('base-oct');
+const baseBin = document.getElementById('base-bin');
+
+// Graph DOM elements
+const graphExpr = document.getElementById('graph-expr');
+const graphPlotBtn = document.getElementById('graph-plot-btn');
+const graphCanvas = document.getElementById('graph-canvas');
+const graphCoords = document.getElementById('graph-coords');
+const graphZoomIn = document.getElementById('graph-zoom-in');
+const graphZoomOut = document.getElementById('graph-zoom-out');
+const graphReset = document.getElementById('graph-reset');
+
+// Statistics DOM elements
+const statsInput = document.getElementById('stats-input');
+const statsCalcBtn = document.getElementById('stats-calc-btn');
+const statsSampleBtn = document.getElementById('stats-sample-btn');
+const statsClearBtn = document.getElementById('stats-clear-btn');
+const statsCanvas = document.getElementById('stats-canvas');
 
 // Programmer DOM elements
 const baseHex = document.getElementById('base-hex');
@@ -137,7 +168,7 @@ const showError = (rawMsg) => {
 };
 
 const setCalculatorMode = (mode) => {
-  if (!['standard', 'scientific', 'programmer', 'financial', 'converter'].includes(mode)) {
+  if (!['standard', 'scientific', 'graph', 'stats', 'programmer', 'financial', 'converter'].includes(mode)) {
     return;
   }
 
@@ -156,6 +187,10 @@ const setCalculatorMode = (mode) => {
     updateFinancialEmi();
     updateFinancialTip();
     updateFinancialDiscount();
+  } else if (mode === 'graph') {
+    setTimeout(renderGraph, 30);
+  } else if (mode === 'stats') {
+    renderStatistics();
   }
 };
 
@@ -264,19 +299,28 @@ const renderHistory = () => {
     return;
   }
 
-  const entries = history.getEntries();
+  const query = historySearch?.value.trim().toLowerCase() || '';
+  const allEntries = history.getEntries();
+  const entriesWithIdx = allEntries.map((rawEntry, idx) => ({ rawEntry, actualIndex: idx }));
+
+  const filtered = query
+    ? entriesWithIdx.filter(({ rawEntry }) => {
+        const parsed = parseHistoryEntry(rawEntry);
+        return (parsed.expression + ' ' + parsed.result).toLowerCase().includes(query);
+      })
+    : entriesWithIdx;
+
   historyList.innerHTML = '';
 
-  if (entries.length === 0) {
+  if (filtered.length === 0) {
     const item = document.createElement('li');
     item.className = 'history-empty';
-    item.textContent = 'No calculations yet';
+    item.textContent = query ? 'No matching calculations' : 'No calculations yet';
     historyList.appendChild(item);
     return;
   }
 
-  entries.slice(-20).reverse().forEach((rawEntry, index) => {
-    const actualIndex = entries.length - 1 - index;
+  filtered.slice(-20).reverse().forEach(({ rawEntry, actualIndex }) => {
     const parsed = parseHistoryEntry(rawEntry);
 
     const item = document.createElement('li');
@@ -351,6 +395,15 @@ const clearHistory = () => {
   renderHistory();
 };
 
+const THEMES = ['dark', 'light', 'oled', 'cyberpunk', 'sunset'];
+const THEME_ICONS = {
+  dark: '☀️',
+  light: '🌙',
+  oled: '⬛',
+  cyberpunk: '⚡',
+  sunset: '🌅',
+};
+
 const updateTheme = (theme) => {
   document.body.dataset.theme = theme;
   try {
@@ -359,7 +412,8 @@ const updateTheme = (theme) => {
     // Storage access restricted
   }
   if (themeToggle) {
-    themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+    themeToggle.textContent = THEME_ICONS[theme] || '☀️';
+    themeToggle.title = `Theme: ${theme.toUpperCase()} (Click to cycle)`;
   }
 };
 
@@ -1336,6 +1390,350 @@ document.addEventListener('keydown', (event) => {
     }
   }
 });
+
+// 2D Function Graphing
+let graphScale = 32; // px per unit
+let graphOriginX = 0;
+let graphOriginY = 0;
+let graphDragging = false;
+let graphDragStartX = 0;
+let graphDragStartY = 0;
+
+const renderGraph = () => {
+  if (!graphCanvas) return;
+  const ctx = graphCanvas.getContext('2d');
+  const w = graphCanvas.width;
+  const h = graphCanvas.height;
+
+  // Background
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, w, h);
+
+  const ox = w / 2 + graphOriginX;
+  const oy = h / 2 + graphOriginY;
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+  ctx.lineWidth = 1;
+
+  const startX = (ox % graphScale) - graphScale;
+  for (let x = startX; x <= w + graphScale; x += graphScale) {
+    ctx.beginPath();
+    ctx.moveTo(x, 0);
+    ctx.lineTo(x, h);
+    ctx.stroke();
+  }
+
+  const startY = (oy % graphScale) - graphScale;
+  for (let y = startY; y <= h + graphScale; y += graphScale) {
+    ctx.beginPath();
+    ctx.moveTo(0, y);
+    ctx.lineTo(w, y);
+    ctx.stroke();
+  }
+
+  // Axes
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+  ctx.moveTo(0, oy);
+  ctx.lineTo(w, oy);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(ox, 0);
+  ctx.lineTo(ox, h);
+  ctx.stroke();
+
+  // Plot curve
+  const expr = (graphExpr?.value || 'sin(x)').trim();
+  if (!expr) return;
+
+  ctx.strokeStyle = '#f97316';
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+
+  let isFirst = true;
+  for (let px = 0; px <= w; px += 2) {
+    const xVal = (px - ox) / graphScale;
+    const yVal = evaluateFunctionAt(expr, xVal);
+
+    if (yVal === null || !Number.isFinite(yVal)) {
+      isFirst = true;
+      continue;
+    }
+
+    const py = oy - yVal * graphScale;
+    if (py < -h || py > h * 2) {
+      isFirst = true;
+      continue;
+    }
+
+    if (isFirst) {
+      ctx.moveTo(px, py);
+      isFirst = false;
+    } else {
+      ctx.lineTo(px, py);
+    }
+  }
+  ctx.stroke();
+};
+
+if (graphCanvas) {
+  graphCanvas.addEventListener('mousemove', (e) => {
+    const rect = graphCanvas.getBoundingClientRect();
+    const scaleX = graphCanvas.width / rect.width;
+    const scaleY = graphCanvas.height / rect.height;
+    const px = (e.clientX - rect.left) * scaleX;
+    const py = (e.clientY - rect.top) * scaleY;
+
+    const ox = graphCanvas.width / 2 + graphOriginX;
+    const oy = graphCanvas.height / 2 + graphOriginY;
+
+    const xVal = (px - ox) / graphScale;
+    const yVal = (oy - py) / graphScale;
+
+    if (graphCoords) {
+      graphCoords.textContent = `x: ${xVal.toFixed(2)}, y: ${yVal.toFixed(2)}`;
+    }
+
+    if (graphDragging) {
+      graphOriginX += (e.clientX - graphDragStartX) * scaleX;
+      graphOriginY += (e.clientY - graphDragStartY) * scaleY;
+      graphDragStartX = e.clientX;
+      graphDragStartY = e.clientY;
+      renderGraph();
+    }
+  });
+
+  graphCanvas.addEventListener('mousedown', (e) => {
+    graphDragging = true;
+    graphDragStartX = e.clientX;
+    graphDragStartY = e.clientY;
+  });
+
+  window.addEventListener('mouseup', () => {
+    graphDragging = false;
+  });
+
+  graphCanvas.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    if (e.deltaY < 0) {
+      graphScale = Math.min(160, graphScale * 1.15);
+    } else {
+      graphScale = Math.max(8, graphScale / 1.15);
+    }
+    renderGraph();
+  }, { passive: false });
+}
+
+if (graphPlotBtn) {
+  graphPlotBtn.addEventListener('click', renderGraph);
+}
+if (graphExpr) {
+  graphExpr.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      renderGraph();
+    }
+  });
+}
+document.querySelectorAll('.graph-preset').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.graph-preset').forEach((b) => b.classList.remove('is-active'));
+    btn.classList.add('is-active');
+    if (graphExpr) graphExpr.value = btn.dataset.preset;
+    renderGraph();
+  });
+});
+if (graphZoomIn) {
+  graphZoomIn.addEventListener('click', () => {
+    graphScale = Math.min(160, graphScale * 1.25);
+    renderGraph();
+  });
+}
+if (graphZoomOut) {
+  graphZoomOut.addEventListener('click', () => {
+    graphScale = Math.max(8, graphScale / 1.25);
+    renderGraph();
+  });
+}
+if (graphReset) {
+  graphReset.addEventListener('click', () => {
+    graphScale = 32;
+    graphOriginX = 0;
+    graphOriginY = 0;
+    renderGraph();
+  });
+}
+
+// Statistics Analyzer
+const renderStatistics = () => {
+  const input = statsInput?.value || '';
+  try {
+    const stats = calculateStatistics(input);
+    const countEl = document.getElementById('stat-count');
+    const sumEl = document.getElementById('stat-sum');
+    const meanEl = document.getElementById('stat-mean');
+    const medianEl = document.getElementById('stat-median');
+    const modeEl = document.getElementById('stat-mode');
+    const rangeEl = document.getElementById('stat-range');
+    const varEl = document.getElementById('stat-var');
+    const stdEl = document.getElementById('stat-std');
+
+    if (countEl) countEl.textContent = stats.count;
+    if (sumEl) sumEl.textContent = formatNumber(stats.sum);
+    if (meanEl) meanEl.textContent = formatNumber(stats.mean);
+    if (medianEl) medianEl.textContent = formatNumber(stats.median);
+    if (modeEl) modeEl.textContent = stats.mode ? stats.mode.join(', ') : 'None';
+    if (rangeEl) rangeEl.textContent = formatNumber(stats.range);
+    if (varEl) varEl.textContent = formatNumber(stats.variance);
+    if (stdEl) stdEl.textContent = formatNumber(stats.stdDev);
+
+    renderStatsChart(input);
+  } catch {
+    // Keep clean
+  }
+};
+
+const renderStatsChart = (input) => {
+  if (!statsCanvas) return;
+  const ctx = statsCanvas.getContext('2d');
+  const w = statsCanvas.width;
+  const h = statsCanvas.height;
+
+  ctx.fillStyle = '#090d16';
+  ctx.fillRect(0, 0, w, h);
+
+  const nums = input
+    .split(/[\s,]+/)
+    .map(Number)
+    .filter(Number.isFinite)
+    .sort((a, b) => a - b);
+
+  if (nums.length === 0) return;
+
+  const barCount = Math.min(nums.length, 30);
+  const maxVal = Math.max(...nums, 1);
+  const minVal = Math.min(0, Math.min(...nums));
+  const span = maxVal - minVal || 1;
+
+  const barW = Math.max(8, (w - 30) / barCount);
+  const padding = 15;
+
+  nums.slice(0, barCount).forEach((val, i) => {
+    const barH = Math.max(4, ((val - minVal) / span) * (h - 30));
+    const x = padding + i * barW;
+    const y = h - 15 - barH;
+
+    const grad = ctx.createLinearGradient(0, y, 0, y + barH);
+    grad.addColorStop(0, '#f97316');
+    grad.addColorStop(1, '#ea580c');
+    ctx.fillStyle = grad;
+    ctx.fillRect(x + 2, y, barW - 4, barH);
+  });
+};
+
+if (statsCalcBtn) {
+  statsCalcBtn.addEventListener('click', renderStatistics);
+}
+if (statsSampleBtn) {
+  statsSampleBtn.addEventListener('click', () => {
+    if (statsInput) {
+      statsInput.value = '15, 22, 28, 35, 35, 42, 50, 58, 64, 75';
+      renderStatistics();
+    }
+  });
+}
+if (statsClearBtn) {
+  statsClearBtn.addEventListener('click', () => {
+    if (statsInput) statsInput.value = '';
+    ['stat-count', 'stat-sum', 'stat-mean', 'stat-median', 'stat-range', 'stat-var', 'stat-std'].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = '0';
+    });
+    const modeEl = document.getElementById('stat-mode');
+    if (modeEl) modeEl.textContent = 'None';
+    if (statsCanvas) {
+      const ctx = statsCanvas.getContext('2d');
+      ctx.fillStyle = '#090d16';
+      ctx.fillRect(0, 0, statsCanvas.width, statsCanvas.height);
+    }
+  });
+}
+if (statsInput) {
+  statsInput.addEventListener('input', renderStatistics);
+}
+
+// Constants Modal
+const toggleConstantsModal = (open) => {
+  if (!constantsModal) return;
+  if (open === true || (open === undefined && !constantsModal.open)) {
+    renderConstantsList(constantsSearch?.value || '');
+    constantsModal.showModal();
+  } else {
+    constantsModal.close();
+  }
+};
+
+const renderConstantsList = (query = '') => {
+  if (!constantsList) return;
+  constantsList.innerHTML = '';
+  const q = query.trim().toLowerCase();
+  const filtered = PHYSICS_CONSTANTS.filter((c) =>
+    c.name.toLowerCase().includes(q) || c.symbol.toLowerCase().includes(q)
+  );
+
+  filtered.forEach((c) => {
+    const card = document.createElement('div');
+    card.className = 'constant-card';
+    card.title = `Insert ${c.symbol} (${c.value}) into calculation`;
+    card.innerHTML = `
+      <div class="constant-info">
+        <span class="constant-name">${c.name} (${c.symbol})</span>
+        <span class="constant-unit">${c.unit}</span>
+      </div>
+      <span class="constant-val">${c.value}</span>
+    `;
+    card.addEventListener('click', () => {
+      appendValue(String(c.value));
+      toggleConstantsModal(false);
+    });
+    constantsList.appendChild(card);
+  });
+};
+
+if (constantsToggle) {
+  constantsToggle.addEventListener('click', () => toggleConstantsModal(true));
+}
+if (constantsClose) {
+  constantsClose.addEventListener('click', () => toggleConstantsModal(false));
+}
+if (constantsModal) {
+  constantsModal.addEventListener('click', (e) => {
+    if (e.target === constantsModal) toggleConstantsModal(false);
+  });
+}
+if (constantsSearch) {
+  constantsSearch.addEventListener('input', (e) => {
+    renderConstantsList(e.target.value);
+  });
+}
+
+// History search input listener
+if (historySearch) {
+  historySearch.addEventListener('input', renderHistory);
+}
+
+// Theme cycling
+if (themeToggle) {
+  themeToggle.addEventListener('click', () => {
+    const current = document.body.dataset.theme || 'dark';
+    const nextIdx = (THEMES.indexOf(current) + 1) % THEMES.length;
+    updateTheme(THEMES[nextIdx]);
+  });
+}
 
 // PWA Service Worker Registration
 if ('serviceWorker' in navigator) {
