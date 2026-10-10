@@ -699,6 +699,163 @@ function calculateExpression(expression, options = {}) {
   return result;
 }
 
+function getWordMask(wordSize = 32) {
+  switch (Number(wordSize)) {
+    case 8:
+      return 0xFFn;
+    case 16:
+      return 0xFFFFn;
+    case 64:
+      return 0xFFFFFFFFFFFFFFFFn;
+    case 32:
+    default:
+      return 0xFFFFFFFFn;
+  }
+}
+
+function toBigIntSafe(value) {
+  try {
+    if (typeof value === 'bigint') return value;
+    const num = Math.trunc(Number(value) || 0);
+    return BigInt(num);
+  } catch {
+    return 0n;
+  }
+}
+
+function toBaseString(value, base = 10, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const rawBig = toBigIntSafe(value);
+  const unsigned = rawBig & mask;
+
+  if (base === 16) {
+    return unsigned.toString(16).toUpperCase();
+  }
+  if (base === 8) {
+    return unsigned.toString(8);
+  }
+  if (base === 2) {
+    const rawBinary = unsigned.toString(2);
+    const padLength = Math.max(4, Math.ceil(rawBinary.length / 4) * 4);
+    return rawBinary.padStart(padLength, '0');
+  }
+  return unsigned.toString(10);
+}
+
+function bitwiseAnd(a, b, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const res = (toBigIntSafe(a) & toBigIntSafe(b)) & mask;
+  return Number(res);
+}
+
+function bitwiseOr(a, b, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const res = (toBigIntSafe(a) | toBigIntSafe(b)) & mask;
+  return Number(res);
+}
+
+function bitwiseXor(a, b, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const res = (toBigIntSafe(a) ^ toBigIntSafe(b)) & mask;
+  return Number(res);
+}
+
+function bitwiseNot(a, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const res = (~toBigIntSafe(a)) & mask;
+  return Number(res);
+}
+
+function bitwiseShiftLeft(a, bits, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const shiftAmount = BigInt(Math.max(0, Math.trunc(Number(bits) || 0)));
+  const res = (toBigIntSafe(a) << shiftAmount) & mask;
+  return Number(res);
+}
+
+function bitwiseShiftRight(a, bits, wordSize = 32) {
+  const mask = getWordMask(wordSize);
+  const shiftAmount = BigInt(Math.max(0, Math.trunc(Number(bits) || 0)));
+  const unsigned = toBigIntSafe(a) & mask;
+  const res = (unsigned >> shiftAmount) & mask;
+  return Number(res);
+}
+
+function calculateEMI(principal, annualRatePercent, tenureMonths) {
+  const P = Number(principal);
+  const rate = Number(annualRatePercent);
+  const n = Number(tenureMonths);
+
+  if (!Number.isFinite(P) || P <= 0 || !Number.isFinite(rate) || rate < 0 || !Number.isFinite(n) || n <= 0) {
+    throw new Error('Invalid input');
+  }
+
+  const monthlyRate = (rate / 12) / 100;
+  let emi = 0;
+
+  if (monthlyRate === 0) {
+    emi = P / n;
+  } else {
+    const factor = Math.pow(1 + monthlyRate, n);
+    emi = (P * monthlyRate * factor) / (factor - 1);
+  }
+
+  const roundedEmi = Number(emi.toFixed(2));
+  const totalPayment = Number((roundedEmi * n).toFixed(2));
+  const totalInterest = Number((totalPayment - P).toFixed(2));
+
+  return {
+    emi: roundedEmi,
+    totalPayment,
+    totalInterest,
+  };
+}
+
+function calculateTip(billAmount, tipPercent, peopleCount = 1) {
+  const bill = Number(billAmount);
+  const tipPct = Number(tipPercent);
+  const people = Math.max(1, Math.trunc(Number(peopleCount) || 1));
+
+  if (!Number.isFinite(bill) || bill < 0 || !Number.isFinite(tipPct) || tipPct < 0) {
+    throw new Error('Invalid input');
+  }
+
+  const tipAmount = (bill * tipPct) / 100;
+  const totalBill = bill + tipAmount;
+  const perPerson = totalBill / people;
+  const tipPerPerson = tipAmount / people;
+
+  return {
+    tipAmount: Number(tipAmount.toFixed(2)),
+    totalBill: Number(totalBill.toFixed(2)),
+    perPerson: Number(perPerson.toFixed(2)),
+    tipPerPerson: Number(tipPerPerson.toFixed(2)),
+  };
+}
+
+function calculateDiscount(originalPrice, discountPercent, taxPercent = 0) {
+  const price = Number(originalPrice);
+  const discPct = Number(discountPercent);
+  const taxPct = Number(taxPercent || 0);
+
+  if (!Number.isFinite(price) || price < 0 || !Number.isFinite(discPct) || discPct < 0 || !Number.isFinite(taxPct) || taxPct < 0) {
+    throw new Error('Invalid input');
+  }
+
+  const discountAmount = (price * discPct) / 100;
+  const discountedPrice = Math.max(0, price - discountAmount);
+  const taxAmount = (discountedPrice * taxPct) / 100;
+  const finalPrice = discountedPrice + taxAmount;
+
+  return {
+    discountAmount: Number(discountAmount.toFixed(2)),
+    discountedPrice: Number(discountedPrice.toFixed(2)),
+    taxAmount: Number(taxAmount.toFixed(2)),
+    finalPrice: Number(finalPrice.toFixed(2)),
+    totalSavings: Number(discountAmount.toFixed(2)),
+  };
+}
+
 function prepareResultForClipboard(value) {
   if (value === undefined || value === null) {
     return '0';
@@ -742,4 +899,14 @@ export {
   exportHistoryAsTXT,
   createMemoryState,
   createHistoryState,
+  toBaseString,
+  bitwiseAnd,
+  bitwiseOr,
+  bitwiseXor,
+  bitwiseNot,
+  bitwiseShiftLeft,
+  bitwiseShiftRight,
+  calculateEMI,
+  calculateTip,
+  calculateDiscount,
 };

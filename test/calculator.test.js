@@ -36,6 +36,16 @@ import {
   convertSpeed,
   convertTime,
   convertData,
+  toBaseString,
+  bitwiseAnd,
+  bitwiseOr,
+  bitwiseXor,
+  bitwiseNot,
+  bitwiseShiftLeft,
+  bitwiseShiftRight,
+  calculateEMI,
+  calculateTip,
+  calculateDiscount,
 } from '../calculator.js';
 
 test('add adds numbers correctly', () => {
@@ -273,4 +283,59 @@ test('all unit converter categories handle bidirectional conversions', () => {
   // Data
   assert.equal(convertData(8, 'bit', 'byte'), 1);
   assert.equal(convertData(1024, 'gb', 'tb'), 1);
+});
+
+test('programmer base conversion formats values correctly', () => {
+  assert.equal(toBaseString(255, 16, 8), 'FF');
+  assert.equal(toBaseString(255, 10, 8), '255');
+  assert.equal(toBaseString(255, 8, 8), '377');
+  assert.equal(toBaseString(255, 2, 8), '11111111');
+  assert.equal(toBaseString(10, 2, 8), '1010');
+  assert.equal(toBaseString(16, 16, 32), '10');
+});
+
+test('programmer bitwise operations work accurately with masking', () => {
+  assert.equal(bitwiseAnd(12, 10, 32), 8); // 1100 & 1010 = 1000
+  assert.equal(bitwiseOr(12, 10, 32), 14); // 1100 | 1010 = 1110
+  assert.equal(bitwiseXor(12, 10, 32), 6); // 1100 ^ 1010 = 0110
+  assert.equal(bitwiseNot(0, 8), 255); // ~0 with 8-bit mask = 255
+  assert.equal(bitwiseShiftLeft(1, 4, 32), 16);
+  assert.equal(bitwiseShiftRight(16, 2, 32), 4);
+});
+
+test('financial EMI calculator calculates loan amortization correctly', () => {
+  const result = calculateEMI(100000, 10, 12);
+  assert.equal(result.emi, 8791.59);
+  assert.equal(result.totalPayment, 105499.08);
+  assert.equal(result.totalInterest, 5499.08);
+
+  // 0% interest case
+  const zeroInterest = calculateEMI(12000, 0, 12);
+  assert.equal(zeroInterest.emi, 1000);
+  assert.equal(zeroInterest.totalInterest, 0);
+
+  // Invalid inputs
+  assert.throws(() => calculateEMI(-1000, 5, 12), /Invalid input/);
+  assert.throws(() => calculateEMI(1000, -5, 12), /Invalid input/);
+});
+
+test('financial tip and bill splitter calculates totals correctly', () => {
+  const result = calculateTip(100, 15, 2);
+  assert.equal(result.tipAmount, 15);
+  assert.equal(result.totalBill, 115);
+  assert.equal(result.perPerson, 57.5);
+  assert.equal(result.tipPerPerson, 7.5);
+
+  assert.throws(() => calculateTip(-50, 10, 1), /Invalid input/);
+});
+
+test('financial discount and tax calculator computes savings accurately', () => {
+  const result = calculateDiscount(200, 20, 10);
+  assert.equal(result.discountAmount, 40);
+  assert.equal(result.discountedPrice, 160);
+  assert.equal(result.taxAmount, 16);
+  assert.equal(result.finalPrice, 176);
+  assert.equal(result.totalSavings, 40);
+
+  assert.throws(() => calculateDiscount(-100, 10), /Invalid input/);
 });

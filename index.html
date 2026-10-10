@@ -38,8 +38,12 @@
             <div class="mode-switcher" role="tablist" aria-label="Calculator mode selector">
               <button type="button" class="mode-switch is-active" data-calculator-mode="standard" aria-pressed="true">Standard</button>
               <button type="button" class="mode-switch" data-calculator-mode="scientific" aria-pressed="false">Scientific</button>
+              <button type="button" class="mode-switch" data-calculator-mode="programmer" aria-pressed="false">Programmer</button>
+              <button type="button" class="mode-switch" data-calculator-mode="financial" aria-pressed="false">Financial</button>
               <button type="button" class="mode-switch" data-calculator-mode="converter" aria-pressed="false">Convert</button>
             </div>
+            <button id="sound-toggle" class="sound-toggle" type="button" aria-label="Toggle sound feedback" title="Toggle audio feedback">🔊</button>
+            <button id="shortcuts-toggle" class="shortcuts-toggle" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">⌨️</button>
             <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Toggle theme">☀️</button>
           </div>
         </div>
@@ -59,17 +63,21 @@
               <span class="display-label">Expression</span>
               <span id="angle-status" class="angle-status">DEG</span>
             </div>
-            <button id="copy-btn" class="copy-btn" type="button" title="Copy result to clipboard" aria-label="Copy result">
-              <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-              </svg>
-              <span id="copy-btn-text">Copy Result</span>
-            </button>
+            <div class="display-meta-right">
+              <button id="copy-btn" class="copy-btn" type="button" title="Copy result to clipboard" aria-label="Copy result">
+                <svg class="copy-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+                <span id="copy-btn-text">Copy Result</span>
+              </button>
+            </div>
           </div>
           <input id="display" class="display" type="text" readonly value="0" aria-label="Calculator display" />
+          <div id="display-preview" class="display-preview" aria-live="polite"></div>
         </div>
 
+        <!-- Scientific Grid -->
         <div class="scientific-grid" aria-label="Scientific functions">
           <button class="btn scientific" data-action="sin" title="Sine" aria-label="Sine">sin</button>
           <button class="btn scientific" data-action="cos" title="Cosine" aria-label="Cosine">cos</button>
@@ -86,10 +94,15 @@
           <button class="btn scientific" data-action="sqrt" title="Square root (√)" aria-label="Square root">√</button>
           <button class="btn scientific" data-action="reciprocal" title="Reciprocal (1/x)" aria-label="Reciprocal">1/x</button>
 
-          <button class="btn scientific" data-action="log" title="Logarithm (base 10)" aria-label="Logarithm">log</button>
-          <button class="btn scientific" data-action="ln" title="Natural Logarithm (ln)" aria-label="Natural Logarithm">ln</button>
+          <button class="btn scientific" data-value="(" title="Open parenthesis" aria-label="Open parenthesis">(</button>
+          <button class="btn scientific" data-value=")" title="Close parenthesis" aria-label="Close parenthesis">)</button>
           <button class="btn scientific" data-action="factorial" title="Factorial (n!)" aria-label="Factorial">n!</button>
           <button class="btn secondary" data-action="toggle-sign" title="Toggle sign (±)" aria-label="Toggle sign">±</button>
+
+          <button class="btn scientific" data-action="log" title="Logarithm (base 10)" aria-label="Logarithm">log</button>
+          <button class="btn scientific" data-action="ln" title="Natural Logarithm (ln)" aria-label="Natural Logarithm">ln</button>
+          <button class="btn secondary" data-action="percent" title="Percentage (%)">%</button>
+          <button class="btn secondary" data-action="ans" title="Previous Answer">ANS</button>
         </div>
 
         <div class="angle-mode" aria-label="Angle mode selector">
@@ -97,6 +110,168 @@
           <button type="button" class="mode-btn" data-angle-mode="rad" aria-pressed="false">RAD</button>
         </div>
 
+        <!-- Programmer Panel -->
+        <div id="programmer-panel" class="programmer-panel" aria-label="Programmer tools">
+          <div class="base-board">
+            <div class="base-row" data-base="16" title="Click to copy Hexadecimal">
+              <span class="base-tag">HEX</span>
+              <span id="base-hex" class="base-value">0</span>
+            </div>
+            <div class="base-row is-active" data-base="10" title="Click to copy Decimal">
+              <span class="base-tag">DEC</span>
+              <span id="base-dec" class="base-value">0</span>
+            </div>
+            <div class="base-row" data-base="8" title="Click to copy Octal">
+              <span class="base-tag">OCT</span>
+              <span id="base-oct" class="base-value">0</span>
+            </div>
+            <div class="base-row" data-base="2" title="Click to copy Binary">
+              <span class="base-tag">BIN</span>
+              <span id="base-bin" class="base-value">0000</span>
+            </div>
+          </div>
+
+          <div class="programmer-toolbar">
+            <span class="programmer-label">WORD SIZE</span>
+            <div class="word-size-group" role="radiogroup" aria-label="Word size">
+              <button type="button" class="word-btn" data-word-size="64">64-BIT</button>
+              <button type="button" class="word-btn is-active" data-word-size="32">32-BIT</button>
+              <button type="button" class="word-btn" data-word-size="16">16-BIT</button>
+              <button type="button" class="word-btn" data-word-size="8">8-BIT</button>
+            </div>
+          </div>
+
+          <div class="programmer-grid" aria-label="Bitwise operations and hex keys">
+            <button class="btn programmer-btn" data-action="bitwise-and" title="Bitwise AND">AND</button>
+            <button class="btn programmer-btn" data-action="bitwise-or" title="Bitwise OR">OR</button>
+            <button class="btn programmer-btn" data-action="bitwise-xor" title="Bitwise XOR">XOR</button>
+            <button class="btn programmer-btn" data-action="bitwise-not" title="Bitwise NOT">NOT</button>
+            <button class="btn programmer-btn" data-action="bitwise-lsh" title="Shift Left (<<)">LSH</button>
+            <button class="btn programmer-btn" data-action="bitwise-rsh" title="Shift Right (>>)">RSH</button>
+            <button class="btn hex-btn" data-hex="A">A</button>
+            <button class="btn hex-btn" data-hex="B">B</button>
+            <button class="btn hex-btn" data-hex="C">C</button>
+            <button class="btn hex-btn" data-hex="D">D</button>
+            <button class="btn hex-btn" data-hex="E">E</button>
+            <button class="btn hex-btn" data-hex="F">F</button>
+          </div>
+        </div>
+
+        <!-- Financial Panel -->
+        <div id="financial-panel" class="financial-panel" aria-label="Financial tools">
+          <div class="finance-tabs" role="tablist">
+            <button type="button" class="finance-tab is-active" data-finance-tab="emi">Loan / EMI</button>
+            <button type="button" class="finance-tab" data-finance-tab="tip">Tip & Split</button>
+            <button type="button" class="finance-tab" data-finance-tab="discount">Discount & Tax</button>
+          </div>
+
+          <!-- EMI View -->
+          <div class="finance-view is-active" id="finance-emi-view">
+            <div class="finance-form-grid">
+              <div class="finance-field">
+                <label for="emi-principal">Loan Amount ($)</label>
+                <input id="emi-principal" type="number" value="100000" min="1" step="1000" />
+              </div>
+              <div class="finance-field">
+                <label for="emi-rate">Annual Interest (%)</label>
+                <input id="emi-rate" type="number" value="8.5" min="0" max="100" step="0.1" />
+              </div>
+              <div class="finance-field">
+                <label for="emi-tenure">Tenure (Years)</label>
+                <input id="emi-tenure" type="number" value="5" min="1" max="50" step="1" />
+              </div>
+            </div>
+            <div class="finance-summary-cards">
+              <div class="finance-card">
+                <span class="card-title">Monthly EMI</span>
+                <span id="emi-monthly-result" class="card-val">$2,051.65</span>
+              </div>
+              <div class="finance-card">
+                <span class="card-title">Total Interest</span>
+                <span id="emi-interest-result" class="card-val">$23,099.00</span>
+              </div>
+              <div class="finance-card">
+                <span class="card-title">Total Payment</span>
+                <span id="emi-total-result" class="card-val">$123,099.00</span>
+              </div>
+            </div>
+            <button id="emi-use-btn" class="finance-apply-btn" type="button">Use EMI in Calculator</button>
+          </div>
+
+          <!-- Tip View -->
+          <div class="finance-view" id="finance-tip-view">
+            <div class="finance-form-grid">
+              <div class="finance-field">
+                <label for="tip-bill">Bill Amount ($)</label>
+                <input id="tip-bill" type="number" value="85" min="0" step="1" />
+              </div>
+              <div class="finance-field">
+                <label for="tip-percent">Tip Percentage (%)</label>
+                <div class="tip-preset-row">
+                  <button type="button" class="tip-preset-btn" data-tip="10">10%</button>
+                  <button type="button" class="tip-preset-btn is-active" data-tip="15">15%</button>
+                  <button type="button" class="tip-preset-btn" data-tip="18">18%</button>
+                  <button type="button" class="tip-preset-btn" data-tip="20">20%</button>
+                </div>
+                <input id="tip-percent" type="number" value="15" min="0" max="100" step="1" />
+              </div>
+              <div class="finance-field">
+                <label for="tip-people">Number of People</label>
+                <input id="tip-people" type="number" value="2" min="1" max="100" step="1" />
+              </div>
+            </div>
+            <div class="finance-summary-cards">
+              <div class="finance-card">
+                <span class="card-title">Tip Total</span>
+                <span id="tip-total-result" class="card-val">$12.75</span>
+              </div>
+              <div class="finance-card">
+                <span class="card-title">Total Bill</span>
+                <span id="tip-bill-result" class="card-val">$97.75</span>
+              </div>
+              <div class="finance-card highlight">
+                <span class="card-title">Per Person</span>
+                <span id="tip-person-result" class="card-val">$48.88</span>
+              </div>
+            </div>
+            <button id="tip-use-btn" class="finance-apply-btn" type="button">Use Total in Calculator</button>
+          </div>
+
+          <!-- Discount View -->
+          <div class="finance-view" id="finance-discount-view">
+            <div class="finance-form-grid">
+              <div class="finance-field">
+                <label for="disc-price">Original Price ($)</label>
+                <input id="disc-price" type="number" value="120" min="0" step="1" />
+              </div>
+              <div class="finance-field">
+                <label for="disc-percent">Discount (%)</label>
+                <input id="disc-percent" type="number" value="25" min="0" max="100" step="1" />
+              </div>
+              <div class="finance-field">
+                <label for="disc-tax">Sales Tax / GST (%)</label>
+                <input id="disc-tax" type="number" value="8" min="0" max="100" step="0.5" />
+              </div>
+            </div>
+            <div class="finance-summary-cards">
+              <div class="finance-card">
+                <span class="card-title">Savings</span>
+                <span id="disc-savings-result" class="card-val">$30.00</span>
+              </div>
+              <div class="finance-card">
+                <span class="card-title">Tax Added</span>
+                <span id="disc-tax-result" class="card-val">$7.20</span>
+              </div>
+              <div class="finance-card highlight">
+                <span class="card-title">Final Price</span>
+                <span id="disc-final-result" class="card-val">$97.20</span>
+              </div>
+            </div>
+            <button id="disc-use-btn" class="finance-apply-btn" type="button">Use Final Price in Calculator</button>
+          </div>
+        </div>
+
+        <!-- Converter Panel -->
         <div class="converter-panel" aria-label="Unit converter">
           <div class="converter-row">
             <label for="unit-type">Type</label>
@@ -147,6 +322,7 @@
           <button id="convert-btn" class="btn secondary convert-btn" type="button">Convert</button>
         </div>
 
+        <!-- Main Buttons Keypad -->
         <div class="buttons" aria-label="Calculator keypad">
           <button class="btn secondary" data-action="clear">C</button>
           <button class="btn secondary" data-action="delete">DEL</button>
@@ -175,6 +351,27 @@
         </div>
       </section>
     </main>
+
+    <!-- Shortcuts Dialog Modal -->
+    <dialog id="shortcuts-modal" class="shortcuts-modal" aria-labelledby="shortcuts-title">
+      <div class="shortcuts-content">
+        <div class="shortcuts-header">
+          <h3 id="shortcuts-title">Keyboard Shortcuts</h3>
+          <button id="shortcuts-close" class="shortcuts-close-btn" type="button" aria-label="Close dialog">×</button>
+        </div>
+        <div class="shortcuts-grid">
+          <div class="shortcut-item"><kbd>0</kbd>–<kbd>9</kbd><span>Number inputs</span></div>
+          <div class="shortcut-item"><kbd>+</kbd> <kbd>−</kbd> <kbd>*</kbd> <kbd>/</kbd><span>Basic operators</span></div>
+          <div class="shortcut-item"><kbd>(</kbd> <kbd>)</kbd><span>Parentheses</span></div>
+          <div class="shortcut-item"><kbd>Enter</kbd> / <kbd>=</kbd><span>Calculate expression</span></div>
+          <div class="shortcut-item"><kbd>Backspace</kbd><span>Delete last character</span></div>
+          <div class="shortcut-item"><kbd>Esc</kbd><span>Clear display</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>H</kbd><span>Toggle history drawer</span></div>
+          <div class="shortcut-item"><kbd>Ctrl</kbd>+<kbd>C</kbd><span>Copy result to clipboard</span></div>
+          <div class="shortcut-item"><kbd>?</kbd><span>Toggle keyboard help</span></div>
+        </div>
+      </div>
+    </dialog>
 
     <script type="module" src="script.js"></script>
   </body>

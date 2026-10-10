@@ -29,12 +29,27 @@ import {
   sqrtValue,
   squareValue,
   toRadians,
+  toBaseString,
+  bitwiseAnd,
+  bitwiseOr,
+  bitwiseXor,
+  bitwiseNot,
+  bitwiseShiftLeft,
+  bitwiseShiftRight,
+  calculateEMI,
+  calculateTip,
+  calculateDiscount,
 } from './calculator.js';
 
 const display = document.getElementById('display');
+const displayPreview = document.getElementById('display-preview');
 const copyButton = document.getElementById('copy-btn');
 const copyButtonText = document.getElementById('copy-btn-text');
 const themeToggle = document.getElementById('theme-toggle');
+const soundToggle = document.getElementById('sound-toggle');
+const shortcutsToggle = document.getElementById('shortcuts-toggle');
+const shortcutsModal = document.getElementById('shortcuts-modal');
+const shortcutsClose = document.getElementById('shortcuts-close');
 const historyToggle = document.getElementById('history-toggle');
 const historyClearBtn = document.getElementById('history-clear');
 const exportCsvBtn = document.getElementById('export-csv-btn');
@@ -47,6 +62,12 @@ const fromUnitSelect = document.getElementById('from-unit');
 const toUnitSelect = document.getElementById('to-unit');
 const convertButton = document.getElementById('convert-btn');
 
+// Programmer DOM elements
+const baseHex = document.getElementById('base-hex');
+const baseDec = document.getElementById('base-dec');
+const baseOct = document.getElementById('base-oct');
+const baseBin = document.getElementById('base-bin');
+
 const memory = createMemoryState();
 const history = createHistoryState();
 
@@ -54,6 +75,43 @@ let expression = '';
 let lastAnswer = 0;
 let angleMode = 'deg';
 let calculatorMode = 'standard';
+let wordSize = 32;
+
+let audioCtx = null;
+let soundEnabled = (() => {
+  try {
+    return localStorage.getItem('calculator-sound') !== 'false';
+  } catch {
+    return true;
+  }
+})();
+
+const playClickSound = (freq = 440) => {
+  if (!soundEnabled) return;
+  try {
+    const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtxClass) return;
+    if (!audioCtx) {
+      audioCtx = new AudioCtxClass();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(140, audioCtx.currentTime + 0.035);
+    gain.gain.setValueAtTime(0.06, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.035);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.035);
+  } catch {
+    // Audio playback blocked or unsupported
+  }
+};
 
 const mapErrorMessage = (msg) => {
   const lower = String(msg || '').toLowerCase();
@@ -73,10 +131,13 @@ const showError = (rawMsg) => {
     display.value = message;
     display.classList.add('error-state');
   }
+  if (displayPreview) {
+    displayPreview.textContent = '';
+  }
 };
 
 const setCalculatorMode = (mode) => {
-  if (!['standard', 'scientific', 'converter'].includes(mode)) {
+  if (!['standard', 'scientific', 'programmer', 'financial', 'converter'].includes(mode)) {
     return;
   }
 
@@ -88,6 +149,14 @@ const setCalculatorMode = (mode) => {
     button.classList.toggle('is-active', isActive);
     button.setAttribute('aria-pressed', String(isActive));
   });
+
+  if (mode === 'programmer') {
+    updateBaseBoard();
+  } else if (mode === 'financial') {
+    updateFinancialEmi();
+    updateFinancialTip();
+    updateFinancialDiscount();
+  }
 };
 
 const toggleHistoryDrawer = (open) => {
@@ -139,6 +208,48 @@ const updateDisplay = (value) => {
   if (display) {
     display.classList.remove('error-state');
     display.value = String(value || '0');
+  }
+  updateLivePreview();
+  updateBaseBoard();
+};
+
+const updateLivePreview = () => {
+  if (!displayPreview) return;
+  if (!expression || !/[+\-*/^]/.test(expression)) {
+    displayPreview.textContent = '';
+    return;
+  }
+  try {
+    const previewVal = calculateExpression(expression, { ans: lastAnswer });
+    if (Number.isFinite(previewVal)) {
+      displayPreview.textContent = `= ${formatNumber(previewVal)}`;
+    } else {
+      displayPreview.textContent = '';
+    }
+  } catch {
+    displayPreview.textContent = '';
+  }
+};
+
+const updateBaseBoard = () => {
+  if (!baseHex && !baseDec && !baseOct && !baseBin) return;
+  let val = 0;
+  if (expression) {
+    try {
+      val = calculateExpression(expression, { ans: lastAnswer });
+    } catch {
+      val = lastAnswer;
+    }
+  } else {
+    val = lastAnswer;
+  }
+  const cleanInt = Math.trunc(Number(val) || 0);
+  if (baseHex) baseHex.textContent = toBaseString(cleanInt, 16, wordSize);
+  if (baseDec) baseDec.textContent = toBaseString(cleanInt, 10, wordSize);
+  if (baseOct) baseOct.textContent = toBaseString(cleanInt, 8, wordSize);
+  if (baseBin) {
+    const binStr = toBaseString(cleanInt, 2, wordSize);
+    baseBin.textContent = binStr.replace(/(.{4})/g, '$1 ').trim();
   }
 };
 
@@ -640,6 +751,9 @@ const evaluate = () => {
 
     expression = String(result);
     updateDisplay(formattedResult);
+    if (displayPreview) {
+      displayPreview.textContent = '';
+    }
     renderHistory();
   } catch (error) {
     showError(error.message);
@@ -738,6 +852,297 @@ if (exportCsvBtn) {
   });
 }
 
+// Programmer Mode Bitwise Handlers
+const applyBitwiseAction = (action) => {
+  let val = 0;
+  try {
+    val = calculateExpression(expression || String(lastAnswer), { ans: lastAnswer });
+  } catch {
+    val = lastAnswer;
+  }
+
+  const intVal = Math.trunc(Number(val) || 0);
+
+  if (action === 'bitwise-not') {
+    const res = bitwiseNot(intVal, wordSize);
+    lastAnswer = res;
+    expression = String(res);
+    updateDisplay(formatDisplayValue(res));
+    return;
+  }
+
+  // Operator-style prompt for two-operand bitwise
+  const opSymbol = {
+    'bitwise-and': '&',
+    'bitwise-or': '|',
+    'bitwise-xor': '^',
+    'bitwise-lsh': '<<',
+    'bitwise-rsh': '>>',
+  }[action];
+
+  if (!opSymbol) return;
+
+  // Evaluate directly if second operand is present, or append
+  const parts = expression.split(/\s*(&|\||\^|<<|>>)\s*/);
+  if (parts.length === 3 && parts[2]) {
+    const a = Math.trunc(Number(parts[0]) || 0);
+    const op = parts[1];
+    const b = Math.trunc(Number(parts[2]) || 0);
+    let res = 0;
+    if (op === '&') res = bitwiseAnd(a, b, wordSize);
+    else if (op === '|') res = bitwiseOr(a, b, wordSize);
+    else if (op === '^') res = bitwiseXor(a, b, wordSize);
+    else if (op === '<<') res = bitwiseShiftLeft(a, b, wordSize);
+    else if (op === '>>') res = bitwiseShiftRight(a, b, wordSize);
+
+    lastAnswer = res;
+    expression = `${res} ${opSymbol} `;
+    updateDisplay(expression);
+  } else {
+    expression = `${intVal} ${opSymbol} `;
+    updateDisplay(expression);
+  }
+};
+
+// Financial Calculators Live Updates
+const updateFinancialEmi = () => {
+  const pInput = document.getElementById('emi-principal');
+  const rInput = document.getElementById('emi-rate');
+  const tInput = document.getElementById('emi-tenure');
+  const monthlyRes = document.getElementById('emi-monthly-result');
+  const interestRes = document.getElementById('emi-interest-result');
+  const totalRes = document.getElementById('emi-total-result');
+  if (!pInput || !rInput || !tInput) return;
+
+  const p = Number(pInput.value) || 0;
+  const r = Number(rInput.value) || 0;
+  const t = (Number(tInput.value) || 0) * 12;
+
+  if (p > 0 && r >= 0 && t > 0) {
+    try {
+      const { emi, totalPayment, totalInterest } = calculateEMI(p, r, t);
+      if (monthlyRes) monthlyRes.textContent = `$${formatNumber(emi)}`;
+      if (interestRes) interestRes.textContent = `$${formatNumber(totalInterest)}`;
+      if (totalRes) totalRes.textContent = `$${formatNumber(totalPayment)}`;
+    } catch {
+      // ignore
+    }
+  }
+};
+
+const updateFinancialTip = () => {
+  const billInput = document.getElementById('tip-bill');
+  const pctInput = document.getElementById('tip-percent');
+  const pplInput = document.getElementById('tip-people');
+  const tipTotRes = document.getElementById('tip-total-result');
+  const billTotRes = document.getElementById('tip-bill-result');
+  const personRes = document.getElementById('tip-person-result');
+  if (!billInput || !pctInput || !pplInput) return;
+
+  const bill = Number(billInput.value) || 0;
+  const pct = Number(pctInput.value) || 0;
+  const people = Number(pplInput.value) || 1;
+
+  if (bill >= 0 && pct >= 0 && people >= 1) {
+    try {
+      const { tipAmount, totalBill, perPerson } = calculateTip(bill, pct, people);
+      if (tipTotRes) tipTotRes.textContent = `$${formatNumber(tipAmount)}`;
+      if (billTotRes) billTotRes.textContent = `$${formatNumber(totalBill)}`;
+      if (personRes) personRes.textContent = `$${formatNumber(perPerson)}`;
+    } catch {
+      // ignore
+    }
+  }
+};
+
+const updateFinancialDiscount = () => {
+  const priceInput = document.getElementById('disc-price');
+  const pctInput = document.getElementById('disc-percent');
+  const taxInput = document.getElementById('disc-tax');
+  const savRes = document.getElementById('disc-savings-result');
+  const taxRes = document.getElementById('disc-tax-result');
+  const finalRes = document.getElementById('disc-final-result');
+  if (!priceInput || !pctInput || !taxInput) return;
+
+  const price = Number(priceInput.value) || 0;
+  const pct = Number(pctInput.value) || 0;
+  const tax = Number(taxInput.value) || 0;
+
+  if (price >= 0 && pct >= 0 && tax >= 0) {
+    try {
+      const { totalSavings, taxAmount, finalPrice } = calculateDiscount(price, pct, tax);
+      if (savRes) savRes.textContent = `$${formatNumber(totalSavings)}`;
+      if (taxRes) taxRes.textContent = `$${formatNumber(taxAmount)}`;
+      if (finalRes) finalRes.textContent = `$${formatNumber(finalPrice)}`;
+    } catch {
+      // ignore
+    }
+  }
+};
+
+const toggleShortcutsModal = (open) => {
+  if (!shortcutsModal) return;
+  if (open === true || (open === undefined && !shortcutsModal.open)) {
+    shortcutsModal.showModal();
+  } else {
+    shortcutsModal.close();
+  }
+};
+
+const updateSoundToggleUI = () => {
+  if (!soundToggle) return;
+  soundToggle.textContent = soundEnabled ? '🔊' : '🔇';
+  soundToggle.classList.toggle('is-muted', !soundEnabled);
+  try {
+    localStorage.setItem('calculator-sound', String(soundEnabled));
+  } catch {
+    // restricted storage
+  }
+};
+
+// Global audio click feedback
+document.addEventListener('click', (event) => {
+  const btn = event.target.closest('button, .base-row');
+  if (btn) {
+    const isAccent = btn.classList.contains('accent') || btn.classList.contains('convert-btn');
+    playClickSound(isAccent ? 560 : 420);
+  }
+});
+
+// Sound toggle
+if (soundToggle) {
+  soundToggle.addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    updateSoundToggleUI();
+  });
+}
+
+// Shortcuts modal toggle & close
+if (shortcutsToggle) {
+  shortcutsToggle.addEventListener('click', () => toggleShortcutsModal(true));
+}
+if (shortcutsClose) {
+  shortcutsClose.addEventListener('click', () => toggleShortcutsModal(false));
+}
+if (shortcutsModal) {
+  shortcutsModal.addEventListener('click', (e) => {
+    if (e.target === shortcutsModal) {
+      toggleShortcutsModal(false);
+    }
+  });
+}
+
+// Programmer Word Size Selector
+document.querySelectorAll('[data-word-size]').forEach((button) => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('[data-word-size]').forEach((b) => b.classList.remove('is-active'));
+    button.classList.add('is-active');
+    wordSize = Number(button.dataset.wordSize) || 32;
+    updateBaseBoard();
+  });
+});
+
+// Programmer Hex Input Buttons (A-F)
+document.querySelectorAll('[data-hex]').forEach((button) => {
+  button.addEventListener('click', () => {
+    appendValue(button.dataset.hex);
+  });
+});
+
+// Programmer Base Board Click to Copy
+document.querySelectorAll('.base-row').forEach((row) => {
+  row.addEventListener('click', async () => {
+    const valElem = row.querySelector('.base-value');
+    if (!valElem) return;
+    const text = valElem.textContent.replace(/\s+/g, '');
+    if (text) {
+      if (navigator?.clipboard?.writeText) {
+        try {
+          await navigator.clipboard.writeText(text);
+        } catch {
+          // ignore
+        }
+      }
+      row.style.outline = '2px solid #f97316';
+      setTimeout(() => {
+        row.style.outline = '';
+      }, 350);
+    }
+  });
+});
+
+// Financial Tabs
+document.querySelectorAll('[data-finance-tab]').forEach((tabBtn) => {
+  tabBtn.addEventListener('click', () => {
+    const tabName = tabBtn.dataset.financeTab;
+    document.querySelectorAll('[data-finance-tab]').forEach((b) => b.classList.remove('is-active'));
+    tabBtn.classList.add('is-active');
+
+    document.querySelectorAll('.finance-view').forEach((view) => view.classList.remove('is-active'));
+    const targetView = document.getElementById(`finance-${tabName}-view`);
+    if (targetView) targetView.classList.add('is-active');
+  });
+});
+
+// Financial Input Listeners
+['emi-principal', 'emi-rate', 'emi-tenure'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('input', updateFinancialEmi);
+});
+
+['tip-bill', 'tip-percent', 'tip-people'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('input', updateFinancialTip);
+});
+
+document.querySelectorAll('[data-tip]').forEach((tipBtn) => {
+  tipBtn.addEventListener('click', () => {
+    document.querySelectorAll('[data-tip]').forEach((b) => b.classList.remove('is-active'));
+    tipBtn.classList.add('is-active');
+    const tipInput = document.getElementById('tip-percent');
+    if (tipInput) {
+      tipInput.value = tipBtn.dataset.tip;
+      updateFinancialTip();
+    }
+  });
+});
+
+['disc-price', 'disc-percent', 'disc-tax'].forEach((id) => {
+  document.getElementById(id)?.addEventListener('input', updateFinancialDiscount);
+});
+
+// Financial "Use in Calculator" Buttons
+document.getElementById('emi-use-btn')?.addEventListener('click', () => {
+  const p = Number(document.getElementById('emi-principal')?.value) || 0;
+  const r = Number(document.getElementById('emi-rate')?.value) || 0;
+  const t = (Number(document.getElementById('emi-tenure')?.value) || 0) * 12;
+  const { emi } = calculateEMI(p, r, t);
+  expression = String(emi);
+  lastAnswer = emi;
+  setCalculatorMode('standard');
+  updateDisplay(formatDisplayValue(expression));
+});
+
+document.getElementById('tip-use-btn')?.addEventListener('click', () => {
+  const bill = Number(document.getElementById('tip-bill')?.value) || 0;
+  const pct = Number(document.getElementById('tip-percent')?.value) || 0;
+  const ppl = Number(document.getElementById('tip-people')?.value) || 1;
+  const { totalBill } = calculateTip(bill, pct, ppl);
+  expression = String(totalBill);
+  lastAnswer = totalBill;
+  setCalculatorMode('standard');
+  updateDisplay(formatDisplayValue(expression));
+});
+
+document.getElementById('disc-use-btn')?.addEventListener('click', () => {
+  const price = Number(document.getElementById('disc-price')?.value) || 0;
+  const pct = Number(document.getElementById('disc-percent')?.value) || 0;
+  const tax = Number(document.getElementById('disc-tax')?.value) || 0;
+  const { finalPrice } = calculateDiscount(price, pct, tax);
+  expression = String(finalPrice);
+  lastAnswer = finalPrice;
+  setCalculatorMode('standard');
+  updateDisplay(formatDisplayValue(expression));
+});
+
 if (exportTxtBtn) {
   exportTxtBtn.addEventListener('click', () => {
     const txt = history.exportAsTXT ? history.exportAsTXT() : exportHistoryAsTXT(history.getEntries());
@@ -771,6 +1176,30 @@ document.querySelectorAll('[data-action]').forEach((button) => {
     } else if (action === 'delete') {
       deleteLast();
     } else if (action === 'equals') {
+      // Check if expression is bitwise operation
+      const bitwiseMatch = expression.match(/^\s*(-?\d+)\s*(&|\||\^|<<|>>)\s*(-?\d+)\s*$/);
+      if (bitwiseMatch) {
+        const a = Math.trunc(Number(bitwiseMatch[1]) || 0);
+        const op = bitwiseMatch[2];
+        const b = Math.trunc(Number(bitwiseMatch[3]) || 0);
+        let res = 0;
+        if (op === '&') res = bitwiseAnd(a, b, wordSize);
+        else if (op === '|') res = bitwiseOr(a, b, wordSize);
+        else if (op === '^') res = bitwiseXor(a, b, wordSize);
+        else if (op === '<<') res = bitwiseShiftLeft(a, b, wordSize);
+        else if (op === '>>') res = bitwiseShiftRight(a, b, wordSize);
+
+        const rawExpression = expression;
+        const formattedResult = formatDisplayValue(res);
+        const historyEntry = formatHistoryEntry(rawExpression, formattedResult, new Date());
+        history.add(historyEntry);
+        lastAnswer = res;
+        expression = String(res);
+        updateDisplay(formattedResult);
+        if (displayPreview) displayPreview.textContent = '';
+        renderHistory();
+        return;
+      }
       evaluate();
     } else if (action === 'clear-history') {
       clearHistory();
@@ -778,6 +1207,8 @@ document.querySelectorAll('[data-action]').forEach((button) => {
       applyAnsAction();
     } else if (action.startsWith('memory-')) {
       applyMemoryAction(action);
+    } else if (action.startsWith('bitwise-')) {
+      applyBitwiseAction(action);
     } else {
       applyScientificAction(action);
     }
@@ -797,6 +1228,13 @@ document.addEventListener('keydown', (event) => {
   const key = event.key;
   const loweredKey = key.toLowerCase();
 
+  // ? -> Shortcuts modal
+  if (key === '?') {
+    event.preventDefault();
+    toggleShortcutsModal();
+    return;
+  }
+
   // Ctrl+C / Cmd+C -> Copy result
   if ((event.ctrlKey || event.metaKey) && loweredKey === 'c' && !window.getSelection()?.toString()) {
     event.preventDefault();
@@ -814,6 +1252,29 @@ document.addEventListener('keydown', (event) => {
   // Enter or = -> Calculate
   if (key === 'Enter' || key === '=') {
     event.preventDefault();
+    const bitwiseMatch = expression.match(/^\s*(-?\d+)\s*(&|\||\^|<<|>>)\s*(-?\d+)\s*$/);
+    if (bitwiseMatch) {
+      const a = Math.trunc(Number(bitwiseMatch[1]) || 0);
+      const op = bitwiseMatch[2];
+      const b = Math.trunc(Number(bitwiseMatch[3]) || 0);
+      let res = 0;
+      if (op === '&') res = bitwiseAnd(a, b, wordSize);
+      else if (op === '|') res = bitwiseOr(a, b, wordSize);
+      else if (op === '^') res = bitwiseXor(a, b, wordSize);
+      else if (op === '<<') res = bitwiseShiftLeft(a, b, wordSize);
+      else if (op === '>>') res = bitwiseShiftRight(a, b, wordSize);
+
+      const rawExpression = expression;
+      const formattedResult = formatDisplayValue(res);
+      const historyEntry = formatHistoryEntry(rawExpression, formattedResult, new Date());
+      history.add(historyEntry);
+      lastAnswer = res;
+      expression = String(res);
+      updateDisplay(formattedResult);
+      if (displayPreview) displayPreview.textContent = '';
+      renderHistory();
+      return;
+    }
     evaluate();
     return;
   }
@@ -825,9 +1286,13 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  // Escape -> Clear
+  // Escape -> Close modal or Clear
   if (key === 'Escape') {
     event.preventDefault();
+    if (shortcutsModal?.open) {
+      toggleShortcutsModal(false);
+      return;
+    }
     clearExpression();
     return;
   }
@@ -885,6 +1350,10 @@ if ('serviceWorker' in navigator) {
 updateUnitOptions();
 setCalculatorMode('standard');
 setAngleMode('deg');
+updateSoundToggleUI();
+updateFinancialEmi();
+updateFinancialTip();
+updateFinancialDiscount();
 
 const savedTheme = (() => {
   try {
