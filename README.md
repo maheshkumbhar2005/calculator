@@ -64,3 +64,8 @@ node --test
 Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](https://github.com/maheshkumbhar2005/calculator/issues).
 
 To get started, please read our [Contributing Guidelines](CONTRIBUTING.md) for details on code style, testing, and pull request procedures.
+
+## Contributors
+
+Thank you to everyone who has contributed to this project!
+- [maheshkumbhar2005](https://github.com/maheshkumbhar2005) - Creator & Maintainer
