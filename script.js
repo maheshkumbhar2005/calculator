@@ -93,12 +93,6 @@ const statsSampleBtn = document.getElementById('stats-sample-btn');
 const statsClearBtn = document.getElementById('stats-clear-btn');
 const statsCanvas = document.getElementById('stats-canvas');
 
-// Programmer DOM elements
-const baseHex = document.getElementById('base-hex');
-const baseDec = document.getElementById('base-dec');
-const baseOct = document.getElementById('base-oct');
-const baseBin = document.getElementById('base-bin');
-
 const memory = createMemoryState();
 const history = createHistoryState();
 
